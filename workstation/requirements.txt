@@ -1,0 +1,10 @@
+customtkinter
+Pillow
+paho-mqtt
+bidict
+pyinstaller
+pygame
+matplotlib
+pandas
+winshell
+pypiwin32
