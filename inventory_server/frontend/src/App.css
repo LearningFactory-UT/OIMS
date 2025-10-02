@@ -1,0 +1,109 @@
+/* src/App.css */
+
+/* Reset or basic styling, if desired */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: sans-serif;
+}
+
+/* Top bar layout */
+.top-bar {
+  display: flex;
+  align-items: center;
+  background-color: #222;
+  /* Very dark gray */
+  color: #fff;
+  /* White text */
+  padding: 0 20px;
+  height: 60px;
+}
+
+.top-bar img {
+  height: 40px;
+  margin-right: 15px;
+}
+
+.top-bar .title {
+  font-weight: bold;
+  font-size: 1.5rem;
+  margin-right: 30px;
+}
+
+.top-bar .time {
+  margin: 0 auto;
+  /* pushes it to center */
+  font-size: 1.2rem;
+}
+
+.top-bar .timer {
+  margin-right: 30px;
+  font-size: 1.1rem;
+}
+
+.top-bar .settings-button {
+  cursor: pointer;
+  background-color: #4b4b4b;
+  border: none;
+  color: white;
+  padding: 8px 16px;
+  font-size: 1rem;
+  border-radius: 5px;
+}
+
+.top-bar .settings-button:hover {
+  background-color: #666;
+}
+
+/* Inventory Page layout */
+.inventory-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 60px);
+  /* fill the screen minus the top bar */
+}
+
+/* The container holding both halves */
+.content-division {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Shared section styling */
+.section {
+  flex: 1;
+  padding: 10px 20px;
+  overflow-y: auto;
+  color: #fff;
+  /* White text */
+}
+
+/* Distinguish them by background color */
+.urgent-section {
+  background-color: #2A2A2A;
+  /* Slightly lighter than #222 */
+}
+
+.nonurgent-section {
+  background-color: #2C2C2C;
+  /* Another subtle difference */
+}
+
+/* Section titles */
+.section-title {
+  font-size: 1.4rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #fff;
+  /* keep text white */
+}
+
+/* If you still want a subtle dividing line between sections */
+.section+.section {
+  border-top: 1px solid #444;
+}
