@@ -1,0 +1,14 @@
+[Unit]
+Description=OIMS Tablet Launcher
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/oims/tablet_launcher
+ExecStart=/usr/bin/env python3 launcher.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+

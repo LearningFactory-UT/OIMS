@@ -1,0 +1,8 @@
+{
+  "api_base_url": "http://rtlsserver.local:3010",
+  "ui_base_url": "http://rtlsserver.local:3000",
+  "station_id": "",
+  "browser_command": [],
+  "healthcheck_interval_seconds": 15
+}
+

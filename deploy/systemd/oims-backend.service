@@ -1,0 +1,15 @@
+[Unit]
+Description=OIMS Backend
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/oims/inventory_server/backend
+EnvironmentFile=/opt/oims/.env
+ExecStart=/opt/oims/inventory_server/backend/.venv/bin/python run.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+

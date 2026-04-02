@@ -65,3 +65,24 @@
 .modal-content button:last-child:hover {
     background-color: #444;
 }
+
+.decision-modal {
+    width: 420px;
+    max-width: calc(100vw - 32px);
+}
+
+.decision-copy {
+    color: #d7e5dd;
+    line-height: 1.5;
+    margin-bottom: 22px;
+}
+
+.decision-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.modal-action {
+    min-width: 132px;
+}

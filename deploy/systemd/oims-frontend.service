@@ -1,0 +1,14 @@
+[Unit]
+Description=OIMS Frontend
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/oims/inventory_server/frontend
+ExecStart=/usr/bin/env npx serve -s build -l 3000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
