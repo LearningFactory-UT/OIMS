@@ -21,7 +21,8 @@ class DomainEntityTests(unittest.TestCase):
 
         self.assertEqual(payload["station_id"], "station-5")
         self.assertEqual(payload["original_ws_id"], "station-5")
-        self.assertEqual(payload["ws_id"], "WS-05")
+        self.assertEqual(payload["ws_id"], "station-5")
+        self.assertEqual(payload["display_name"], "WS-05")
         self.assertEqual(payload["items_dict"], {"Motor": 2})
 
 

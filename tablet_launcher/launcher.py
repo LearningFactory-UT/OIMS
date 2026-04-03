@@ -8,6 +8,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from urllib.parse import quote
 from urllib.error import URLError
 from urllib.request import urlopen
 
@@ -26,10 +27,16 @@ def load_config() -> dict:
 
 def workstation_url(config: dict) -> str:
     station_id = config.get("station_id")
-    if not station_id:
+    device_role = config.get("device_role", "tablet")
+    device_token = config.get("device_token", "")
+    if not device_token:
+        raise RuntimeError("No device_token configured. Run provision.py first.")
+    if device_role == "tablet" and not station_id:
         raise RuntimeError("No station_id configured. Run provision.py first.")
     ui_base_url = config.get("ui_base_url", "").rstrip("/")
-    return f"{ui_base_url}/workstation/{station_id}"
+    if device_role == "inventory":
+        return f"{ui_base_url}/inventory?token={quote(device_token)}"
+    return f"{ui_base_url}/tablet?token={quote(device_token)}"
 
 
 def healthcheck_url(config: dict) -> str:
@@ -86,4 +93,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

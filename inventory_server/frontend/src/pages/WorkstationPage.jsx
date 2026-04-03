@@ -35,6 +35,10 @@ export default function WorkstationPage({ currentTime, stationId, systemState })
       ),
     [stationId, systemState.stations]
   );
+  const stationHeading =
+    station && station.display_name !== station.station_id
+      ? `${station.display_name} · ${station.station_id}`
+      : station?.station_id || station?.display_name || "";
 
   useEffect(() => {
     if (!stationId) {
@@ -43,21 +47,8 @@ export default function WorkstationPage({ currentTime, stationId, systemState })
 
     let cancelled = false;
 
-    async function registerAndHeartbeat() {
+    async function heartbeat() {
       try {
-        await apiFetch("/api/stations/register", {
-          method: "POST",
-          body: JSON.stringify({
-            station_id: stationId,
-            ws_id: stationId,
-            client_type: "web-tablet",
-          }),
-        });
-
-        if (cancelled) {
-          return;
-        }
-
         await apiFetch(`/api/stations/${stationId}/heartbeat`, {
           method: "POST",
           body: JSON.stringify({ client_type: "web-tablet" }),
@@ -67,8 +58,8 @@ export default function WorkstationPage({ currentTime, stationId, systemState })
       }
     }
 
-    registerAndHeartbeat();
-    const intervalId = window.setInterval(registerAndHeartbeat, 15000);
+    heartbeat();
+    const intervalId = window.setInterval(heartbeat, 15000);
 
     return () => {
       cancelled = true;
@@ -247,8 +238,8 @@ export default function WorkstationPage({ currentTime, stationId, systemState })
         <section className="panel">
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Workstation</p>
-              <h2>Waiting for station projection</h2>
+          <p className="eyebrow">Workstation</p>
+          <h2>Waiting for station projection</h2>
             </div>
           </div>
           <p className="muted-copy">
@@ -264,7 +255,7 @@ export default function WorkstationPage({ currentTime, stationId, systemState })
       <section className="hero-panel workstation-hero">
         <div>
           <p className="eyebrow">Web Workstation</p>
-          <h1>{station.display_name}</h1>
+          <h1>{stationHeading}</h1>
           <p className="hero-copy">
             One shared item grid with operator-specific actions and live central state.
           </p>

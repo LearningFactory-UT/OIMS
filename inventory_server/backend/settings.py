@@ -27,6 +27,8 @@ class Settings:
     host: str
     port: int
     secret_key: str
+    admin_username: str
+    admin_password: str
     broker_hostname: str
     broker_port: int
     database_url: str
@@ -38,9 +40,17 @@ class Settings:
 def load_settings() -> Settings:
     json_defaults = _load_json_defaults()
     database_url = os.getenv("OIMS_DATABASE_URL") or _sqlite_url_for(DEFAULT_DATABASE_PATH)
+    default_origins = ",".join(
+        [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://rtlsserver.local",
+            "http://rtlsserver.local:3000",
+        ]
+    )
     cors_origins = [
         origin.strip()
-        for origin in os.getenv("OIMS_CORS_ORIGINS", "*").split(",")
+        for origin in os.getenv("OIMS_CORS_ORIGINS", default_origins).split(",")
         if origin.strip()
     ]
 
@@ -48,6 +58,8 @@ def load_settings() -> Settings:
         host=os.getenv("OIMS_HOST", "0.0.0.0"),
         port=int(os.getenv("OIMS_PORT", "3010")),
         secret_key=os.getenv("OIMS_SECRET_KEY", "oims-development-secret"),
+        admin_username=os.getenv("OIMS_ADMIN_USERNAME", "admin"),
+        admin_password=os.getenv("OIMS_ADMIN_PASSWORD", "change-me"),
         broker_hostname=os.getenv(
             "OIMS_BROKER_HOSTNAME",
             json_defaults.get("broker_hostname", "rtlsserver.local"),
@@ -63,4 +75,3 @@ def load_settings() -> Settings:
 
 
 settings = load_settings()
-

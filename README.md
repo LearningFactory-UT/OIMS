@@ -12,6 +12,10 @@ OIMS is an ordering and inventory management system for a learning-factory drone
 - The central backend is the system of record for timer state, stations, orders, operator-side state, and andon light state.
 - MQTT topic compatibility is preserved for the current `v1` contract so the external timer sender and ESP32 devices keep working.
 - The new workstation runtime is browser-based and centrally hosted; the local tablet footprint is reduced to a thin launcher/provisioning script.
+- The admin, inventory, and tablet surfaces are now compartmentalized:
+  - `/admin` requires admin login
+  - `/inventory` requires an inventory device token
+  - `/tablet` requires a tablet device token bound to one station
 - The legacy Python workstation remains available while the web workstation reaches parity.
 
 ## Local Development
@@ -58,10 +62,10 @@ python3 launcher.py
 
 ## Deployment
 
+- Production on `rtlsserver`: [docs/rtlsserver-deployment.md](/Users/giovannichiementin/Desktop/Work%20in%20progress/OIMS/docs/rtlsserver-deployment.md)
 - Docker Compose: `docker compose up --build`
 - Native service examples: `deploy/systemd/`
 
 ## MQTT Contract
 
 The preserved `v1` MQTT topics and payloads are documented in [docs/mqtt-v1.md](/Users/giovannichiementin/Desktop/Work%20in%20progress/OIMS/docs/mqtt-v1.md).
-

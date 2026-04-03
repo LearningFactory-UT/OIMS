@@ -15,6 +15,7 @@ class OrderModel(Base):
     order_id = Column(String, unique=True, nullable=False)
     original_ws_id = Column(String, nullable=False)
     ws_id = Column(String, nullable=False)
+    display_name = Column(String, nullable=True)
     side = Column(String, nullable=False)
     creation_time = Column(DateTime, default=datetime.utcnow, nullable=False)
     urgent = Column(Boolean, default=False, nullable=False)
@@ -28,8 +29,8 @@ class OrderModel(Base):
             "order_id": self.order_id,
             "station_id": self.original_ws_id,
             "original_ws_id": self.original_ws_id,
-            "ws_id": self.ws_id,
-            "display_name": self.ws_id,
+            "ws_id": self.original_ws_id,
+            "display_name": self.display_name or self.ws_id or self.original_ws_id,
             "side": self.side,
             "creation_time": self.creation_time.isoformat(),
             "urgent": self.urgent,
@@ -107,3 +108,19 @@ class EventLogModel(Base):
     side = Column(String, nullable=True)
     payload_json = Column(JSON, nullable=False, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class DeviceModel(Base):
+    __tablename__ = "devices"
+
+    id = Column(Integer, primary_key=True)
+    device_id = Column(String, unique=True, nullable=False)
+    role = Column(String, nullable=False)
+    label = Column(String, nullable=False)
+    station_id = Column(String, nullable=True)
+    token_hash = Column(String, nullable=False)
+    token_hint = Column(String, nullable=False)
+    enabled = Column(Boolean, default=True, nullable=False)
+    last_used_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)

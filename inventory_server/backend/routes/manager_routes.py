@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 
+from auth.access import require_roles
 from mqtt.mqtt_service import MQTTService
 from services.inventory_service import InventoryService
 
@@ -8,6 +9,7 @@ manager_bp = Blueprint("manager_bp", __name__)
 
 
 @manager_bp.route("/assembly", methods=["POST"])
+@require_roles("admin")
 def set_assembly_type():
     data = request.get_json() or {}
     atype = data.get("assembly_type", "standard")
@@ -22,6 +24,7 @@ def set_assembly_type():
 
 
 @manager_bp.route("/disable", methods=["POST"])
+@require_roles("admin")
 def disable_workstation():
     data = request.get_json() or {}
     ws_ids = data.get("ws_ids") or data.get("original_ws_ids") or []
@@ -40,6 +43,7 @@ def disable_workstation():
 
 
 @manager_bp.route("/enable", methods=["POST"])
+@require_roles("admin")
 def enable_workstation():
     data = request.get_json() or {}
     ws_ids = data.get("ws_ids") or data.get("original_ws_ids") or []
@@ -55,4 +59,3 @@ def enable_workstation():
     )
 
     return jsonify({"stations": updated}), 200
-

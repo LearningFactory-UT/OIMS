@@ -16,6 +16,7 @@ Supported commands: `start`, `stop`, `pause`, `resume`.
 ## Orders
 
 - Topic: `/ws_manager/orders`
+- `attributes.ws_id` is the stable station ID used by the physical workstation and external integrations.
 - Payload:
 
 ```json
@@ -143,4 +144,3 @@ Carries a full workstation snapshot during reconnect or identify flows.
 ```json
 {"original_ws_id":"5","side":"L","image_name":"GbB"}
 ```
-

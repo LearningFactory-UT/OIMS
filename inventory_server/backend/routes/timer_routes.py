@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 
+from auth.access import require_roles
 from mqtt.mqtt_service import MQTTService
 from services.timer_service import TimerService
 
@@ -8,11 +9,13 @@ timer_bp = Blueprint("timer_bp", __name__)
 
 
 @timer_bp.route("/", methods=["GET"])
+@require_roles("admin", "inventory", "tablet")
 def get_timer_state():
     return jsonify(TimerService.get_instance().snapshot().to_dict())
 
 
 @timer_bp.route("/", methods=["POST"])
+@require_roles("admin")
 def control_timer():
     data = request.get_json() or {}
     command = data.get("command")
@@ -33,6 +36,7 @@ def control_timer():
 
 
 @timer_bp.route("/remaining", methods=["GET"])
+@require_roles("admin", "inventory", "tablet")
 def get_remaining():
     remaining = TimerService.get_instance().get_remaining_seconds()
     return jsonify({"remaining_seconds": remaining})

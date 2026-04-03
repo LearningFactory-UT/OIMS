@@ -7,7 +7,7 @@ class LegacyOrderContractTests(unittest.TestCase):
     def test_legacy_payload_uses_original_order_shape(self):
         order = {
             "order_id": "WS5_001",
-            "ws_id": "5",
+            "station_id": "5",
             "side": "L",
             "urgent": True,
             "items_dict": {"Motor": 2, "Battery": 1},

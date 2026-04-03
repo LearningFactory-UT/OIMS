@@ -111,6 +111,11 @@
   gap: 1.4rem;
 }
 
+.auth-page {
+  min-height: calc(100vh - 3.2rem);
+  place-items: center;
+}
+
 .hero-panel,
 .panel {
   border: 1px solid var(--panel-border);
@@ -227,6 +232,10 @@
   padding: 0.8rem 1rem;
 }
 
+.compact-button {
+  padding: 0.45rem 0.8rem;
+}
+
 .primary-button {
   background: linear-gradient(135deg, var(--accent) 0%, #4cab84 100%);
   color: #072117;
@@ -262,13 +271,21 @@
 
 .station-card,
 .order-card,
-.item-card {
+.item-card,
+.device-card {
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .station-card {
+  padding: 1rem;
+  color: var(--text-main);
+}
+
+.device-card {
+  display: grid;
+  gap: 0.7rem;
   padding: 1rem;
   color: var(--text-main);
 }
@@ -462,6 +479,36 @@
 .board-row.urgent {
   border-color: rgba(214, 181, 91, 0.36);
   box-shadow: inset 0 0 0 1px rgba(214, 181, 91, 0.18);
+}
+
+.auth-panel {
+  width: min(520px, 100%);
+}
+
+.auth-error {
+  color: #f1a89f;
+}
+
+.device-list {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.token-panel {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 18px;
+  background: rgba(114, 220, 175, 0.08);
+  border: 1px solid rgba(114, 220, 175, 0.16);
+}
+
+.token-value {
+  margin-top: 0.8rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.18);
+  font-family: "SFMono-Regular", "Menlo", monospace;
+  overflow-wrap: anywhere;
 }
 
 .board-meta {

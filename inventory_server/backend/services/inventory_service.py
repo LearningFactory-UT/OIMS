@@ -87,10 +87,15 @@ class InventoryService:
                 self._load_side_record(side_record)
 
             for order_record in active_orders:
+                station = self.station_registry.get(order_record.original_ws_id)
                 order = Order(
                     order_id=order_record.order_id,
                     station_id=order_record.original_ws_id,
-                    station_display_name=order_record.ws_id,
+                    station_display_name=(
+                        order_record.display_name
+                        or (station.display_name if station else None)
+                        or order_record.ws_id
+                    ),
                     side=order_record.side,
                     creation_time=order_record.creation_time,
                     urgent=order_record.urgent,
@@ -421,7 +426,7 @@ class InventoryService:
                     OrderModel.original_ws_id == original_ws_id,
                     OrderModel.end_time.is_(None),
                 )
-                .update({"ws_id": ws_id}, synchronize_session=False)
+                .update({"display_name": ws_id}, synchronize_session=False)
             )
             session.commit()
         finally:
@@ -510,20 +515,20 @@ class InventoryService:
     # ------------------------------------------------------------------
     # Orders
     # ------------------------------------------------------------------
-    def _generate_order_id(self, display_name: str) -> str:
+    def _generate_order_id(self, station_id: str) -> str:
         timestamp = datetime.utcnow().strftime("%H%M%S%f")
-        return f"WS{display_name}_{timestamp}"
+        return f"WS{station_id}_{timestamp}"
 
     def _normalize_order_payload(self, order_data: dict, source: str) -> dict:
         if "attributes" in order_data:
             attributes = order_data["attributes"]
             items = order_data.get("items", {})
             station_id = self.resolve_station_id(
-                ws_id=attributes.get("ws_id"),
+                ws_id=attributes.get("display_name") or attributes.get("ws_id"),
                 original_ws_id=attributes.get("original_ws_id"),
             )
             station = self.station_registry[station_id]
-            order_id = attributes.get("order_id") or self._generate_order_id(station.display_name)
+            order_id = attributes.get("order_id") or self._generate_order_id(station_id)
             return {
                 "order_id": order_id,
                 "station_id": station_id,
@@ -540,7 +545,7 @@ class InventoryService:
         )
         station = self.station_registry[station_id]
         return {
-            "order_id": order_data.get("order_id") or self._generate_order_id(station.display_name),
+            "order_id": order_data.get("order_id") or self._generate_order_id(station_id),
             "station_id": station_id,
             "display_name": station.display_name,
             "side": order_data["side"],
@@ -581,7 +586,8 @@ class InventoryService:
                     OrderModel(
                         order_id=new_order.order_id,
                         original_ws_id=new_order.station_id,
-                        ws_id=new_order.station_display_name,
+                        ws_id=new_order.station_id,
+                        display_name=new_order.station_display_name,
                         side=new_order.side,
                         creation_time=new_order.creation_time,
                         urgent=new_order.urgent,
@@ -591,7 +597,8 @@ class InventoryService:
                 )
             else:
                 existing.original_ws_id = new_order.station_id
-                existing.ws_id = new_order.station_display_name
+                existing.ws_id = new_order.station_id
+                existing.display_name = new_order.station_display_name
                 existing.side = new_order.side
                 existing.urgent = new_order.urgent
                 existing.items_json = new_order.items_dict
@@ -695,6 +702,12 @@ class InventoryService:
                 self.orders_dict.values(), key=lambda current_order: current_order.creation_time
             )
         ]
+
+    def get_order_station_id(self, order_id: str) -> Optional[str]:
+        order = self.orders_dict.get(order_id)
+        if order is None:
+            return None
+        return order.station_id
 
     # ------------------------------------------------------------------
     # Operator-side state
@@ -1011,7 +1024,7 @@ class InventoryService:
     def get_recent_events(self, limit: int = 20) -> list[dict]:
         return list(self.recent_events)[-limit:][::-1]
 
-    def get_state_snapshot(self) -> dict:
+    def _build_full_state_snapshot(self) -> dict:
         from services.timer_service import TimerService
 
         timer_service = TimerService.get_instance()
@@ -1036,9 +1049,99 @@ class InventoryService:
             "recent_events": self.get_recent_events(),
         }
 
+    def _filter_state_snapshot(self, snapshot: dict, access_context=None) -> dict:
+        if access_context is None or not access_context.authenticated:
+            return {
+                "assembly_type": snapshot["assembly_type"],
+                "timer": snapshot["timer"],
+                "stations": [],
+                "orders": [],
+                "summary": {
+                    "active_orders": 0,
+                    "urgent_orders": 0,
+                    "stations": 0,
+                },
+                "recent_events": [],
+                "devices": [],
+            }
+
+        if access_context.is_admin:
+            from services.auth_service import AuthService
+
+            admin_snapshot = dict(snapshot)
+            admin_snapshot["devices"] = AuthService.get_instance().list_devices()
+            return admin_snapshot
+
+        if access_context.role == "inventory":
+            orders = snapshot["orders"]
+            return {
+                "assembly_type": snapshot["assembly_type"],
+                "timer": snapshot["timer"],
+                "stations": [],
+                "orders": orders,
+                "summary": {
+                    "active_orders": len(orders),
+                    "urgent_orders": len([order for order in orders if order["urgent"]]),
+                    "stations": 0,
+                },
+                "recent_events": [],
+                "devices": [],
+            }
+
+        if access_context.role == "tablet":
+            station_id = str(access_context.station_id or "")
+            stations = [
+                station for station in snapshot["stations"] if station["station_id"] == station_id
+            ]
+            orders = [
+                order for order in snapshot["orders"] if order["station_id"] == station_id
+            ]
+            return {
+                "assembly_type": snapshot["assembly_type"],
+                "timer": snapshot["timer"],
+                "stations": stations,
+                "orders": orders,
+                "summary": {
+                    "active_orders": len(orders),
+                    "urgent_orders": len([order for order in orders if order["urgent"]]),
+                    "stations": len(stations),
+                },
+                "recent_events": [],
+                "devices": [],
+            }
+
+        return {
+            "assembly_type": snapshot["assembly_type"],
+            "timer": snapshot["timer"],
+            "stations": [],
+            "orders": [],
+            "summary": {
+                "active_orders": 0,
+                "urgent_orders": 0,
+                "stations": 0,
+            },
+            "recent_events": [],
+            "devices": [],
+        }
+
+    def get_state_snapshot(self, access_context=None) -> dict:
+        return self._filter_state_snapshot(self._build_full_state_snapshot(), access_context)
+
     def emit_state_snapshot(self, sid: Optional[str] = None):
-        snapshot = self.get_state_snapshot()
-        socketio.emit("state_snapshot", snapshot, room=sid)
+        from auth.access import get_current_access_context, get_socket_context, iter_socket_contexts
+
         if sid is not None:
+            access_context = get_socket_context(sid) or get_current_access_context()
+            snapshot = self.get_state_snapshot(access_context)
+            socketio.emit("state_snapshot", snapshot, room=sid)
             return snapshot
-        return snapshot
+
+        full_snapshot = self._build_full_state_snapshot()
+        socket_contexts = iter_socket_contexts()
+        if not socket_contexts:
+            return full_snapshot
+
+        for current_sid, access_context in socket_contexts:
+            filtered_snapshot = self._filter_state_snapshot(full_snapshot, access_context)
+            socketio.emit("state_snapshot", filtered_snapshot, room=current_sid)
+        return full_snapshot

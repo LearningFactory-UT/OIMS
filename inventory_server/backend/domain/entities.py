@@ -27,7 +27,7 @@ class Order:
             "order_id": self.order_id,
             "station_id": self.station_id,
             "original_ws_id": self.station_id,
-            "ws_id": self.station_display_name,
+            "ws_id": self.station_id,
             "display_name": self.station_display_name,
             "side": self.side,
             "creation_time": self.creation_time.isoformat(),
@@ -160,4 +160,3 @@ class AndonState:
 
     def to_dict(self) -> dict:
         return asdict(self)
-

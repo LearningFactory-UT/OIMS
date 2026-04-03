@@ -9,7 +9,17 @@ export function getSocket() {
     socket = io(socketBaseUrl, {
       transports: ["polling"],
       upgrade: false,
+      autoConnect: false,
+      withCredentials: true,
     });
   }
   return socket;
+}
+
+export function disconnectSocket() {
+  if (!socket) {
+    return;
+  }
+  socket.disconnect();
+  socket = undefined;
 }

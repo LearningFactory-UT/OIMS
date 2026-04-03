@@ -1,33 +1,28 @@
 services:
-  mosquitto:
-    image: eclipse-mosquitto:2
-    ports:
-      - "1883:1883"
-    volumes:
-      - ./deploy/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
-
   backend:
     build:
       context: ./inventory_server/backend
     environment:
       OIMS_HOST: 0.0.0.0
       OIMS_PORT: 3010
-      OIMS_BROKER_HOSTNAME: mosquitto
+      OIMS_SECRET_KEY: ${OIMS_SECRET_KEY:-change-me}
+      OIMS_ADMIN_USERNAME: ${OIMS_ADMIN_USERNAME:-admin}
+      OIMS_ADMIN_PASSWORD: ${OIMS_ADMIN_PASSWORD:-change-me}
+      OIMS_BROKER_HOSTNAME: ${OIMS_BROKER_HOSTNAME:-rtlsserver.local}
       OIMS_BROKER_PORT: 1883
       OIMS_DATABASE_URL: sqlite:////app/data/oims.db
-      OIMS_CORS_ORIGINS: "*"
-    ports:
-      - "3010:3010"
+      OIMS_CORS_ORIGINS: ${OIMS_CORS_ORIGINS:-http://rtlsserver.local}
+    expose:
+      - "3010"
     volumes:
       - ./data/backend:/app/data
-    depends_on:
-      - mosquitto
+    restart: unless-stopped
 
   frontend:
     build:
       context: ./inventory_server/frontend
     ports:
-      - "3000:80"
+      - "80:80"
     depends_on:
       - backend
-
+    restart: unless-stopped

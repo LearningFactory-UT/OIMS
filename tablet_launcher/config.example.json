@@ -1,8 +1,9 @@
 {
   "api_base_url": "http://rtlsserver.local:3010",
-  "ui_base_url": "http://rtlsserver.local:3000",
+  "ui_base_url": "http://rtlsserver.local",
+  "device_role": "tablet",
   "station_id": "",
+  "device_token": "",
   "browser_command": [],
   "healthcheck_interval_seconds": 15
 }
-

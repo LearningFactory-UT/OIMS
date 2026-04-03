@@ -24,9 +24,13 @@ def _apply_sqlite_migrations():
                 connection.execute(
                     text("ALTER TABLE orders ADD COLUMN source VARCHAR DEFAULT 'mqtt_v1'")
                 )
+            if "display_name" not in order_columns:
+                connection.execute(text("ALTER TABLE orders ADD COLUMN display_name VARCHAR"))
             connection.execute(
                 text("UPDATE orders SET original_ws_id = ws_id WHERE original_ws_id IS NULL")
             )
+            connection.execute(text("UPDATE orders SET display_name = ws_id WHERE display_name IS NULL"))
+            connection.execute(text("UPDATE orders SET ws_id = original_ws_id WHERE original_ws_id IS NOT NULL"))
 
         if "timers" in table_names:
             timer_columns = {column["name"] for column in inspector.get_columns("timers")}

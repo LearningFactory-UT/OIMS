@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from urllib.request import Request, urlopen
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -22,54 +21,29 @@ def save_config(config: dict):
         json.dump(config, handle, indent=2)
 
 
-def api_request(config: dict, path: str, method: str = "GET", payload: dict | None = None):
-    request = Request(
-        f"{config['api_base_url'].rstrip('/')}{path}",
-        data=json.dumps(payload).encode("utf-8") if payload is not None else None,
-        headers={"Content-Type": "application/json"},
-        method=method,
-    )
-    with urlopen(request, timeout=10) as response:
-        return json.loads(response.read().decode("utf-8"))
-
-
-def choose_station(stations: list[dict]) -> str:
-    if not stations:
-        return ""
-
-    print("Available stations:")
-    for index, station in enumerate(stations, start=1):
-        print(f"{index}. {station['display_name']} ({station['station_id']})")
-
-    selection = input("Select a station number or press Enter to create a new one: ").strip()
-    if not selection:
-        return ""
-    return stations[int(selection) - 1]["station_id"]
-
-
 def main():
     config = load_config()
-    stations = api_request(config, "/api/stations/")
-    station_id = choose_station(stations)
+    role = input("Device role (tablet/inventory) [tablet]: ").strip().lower() or "tablet"
+    if role not in {"tablet", "inventory"}:
+        raise ValueError("Role must be 'tablet' or 'inventory'.")
 
-    if not station_id:
-      station_id = input("Stable station ID: ").strip()
-      display_name = input("Display name (optional): ").strip() or station_id
-      created = api_request(
-          config,
-          "/api/stations/register",
-          method="POST",
-          payload={
-              "station_id": station_id,
-              "display_name": display_name,
-              "client_type": "tablet-launcher",
-              "provisioned_by": "launcher-cli",
-          },
-      )
-      station_id = created["station_id"]
+    station_id = ""
+    if role == "tablet":
+        station_id = input("Stable station ID: ").strip()
+        if not station_id:
+            raise ValueError("A tablet must be assigned to a station_id.")
 
+    device_token = input("Device token: ").strip()
+    if not device_token:
+        raise ValueError("A device token is required.")
+
+    config["device_role"] = role
     config["station_id"] = station_id
+    config["device_token"] = device_token
     save_config(config)
+    if role == "inventory":
+        print("Saved inventory device configuration.")
+        return
     print(f"Saved station assignment: {station_id}")
 
 
