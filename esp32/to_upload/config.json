@@ -1,4 +1,4 @@
 {
     "original_ws_id" : "4",
-    "broker_hostname" : "rtlsserver.local"
+    "broker_hostname" : "your-oims-broker-hostname.local"
 }

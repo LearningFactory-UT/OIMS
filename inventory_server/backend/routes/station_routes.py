@@ -69,6 +69,17 @@ def get_station(station_id):
     return jsonify(inventory_service.get_station_state(station_id))
 
 
+@station_bp.route("/<station_id>", methods=["DELETE"])
+@require_roles("admin")
+def delete_station(station_id):
+    inventory_service = InventoryService.get_instance()
+    try:
+        payload = inventory_service.delete_station(station_id)
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 404
+    return jsonify(payload), 200
+
+
 @station_bp.route("/<station_id>/heartbeat", methods=["POST"])
 @require_roles("admin", "tablet")
 def heartbeat(station_id):

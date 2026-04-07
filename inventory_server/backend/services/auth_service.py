@@ -140,15 +140,10 @@ class AuthService:
             session.close()
 
     def authenticate_device_token(self, raw_token: str) -> dict | None:
-        token_hash_value = hash_token(raw_token)
         session = SessionLocal()
         try:
-            record = (
-                session.query(DeviceModel)
-                .filter_by(token_hash=token_hash_value)
-                .first()
-            )
-            if record is None or not record.enabled:
+            record = self._find_device_by_raw_token(session, raw_token)
+            if record is None:
                 return None
             record.last_used_at = datetime.utcnow()
             record.updated_at = datetime.utcnow()
@@ -157,6 +152,13 @@ class AuthService:
             return self._device_payload(record)
         finally:
             session.close()
+
+    def _find_device_by_raw_token(self, session, raw_token: str) -> DeviceModel | None:
+        token_hash_value = hash_token(raw_token)
+        record = session.query(DeviceModel).filter_by(token_hash=token_hash_value).first()
+        if record is None or not record.enabled:
+            return None
+        return record
 
     def get_device_access_context(self, device_id: str | None) -> AccessContext | None:
         if not device_id:
@@ -171,6 +173,26 @@ class AuthService:
                 authenticated=True,
                 role=record.role,
                 auth_kind="device",
+                device_id=record.device_id,
+                device_label=record.label,
+                station_id=record.station_id,
+            )
+        finally:
+            session.close()
+
+    def get_access_context_for_raw_token(self, raw_token: str | None) -> AccessContext | None:
+        if not raw_token:
+            return None
+
+        session = SessionLocal()
+        try:
+            record = self._find_device_by_raw_token(session, raw_token)
+            if record is None:
+                return None
+            return AccessContext(
+                authenticated=True,
+                role=record.role,
+                auth_kind="device-token-header",
                 device_id=record.device_id,
                 device_label=record.label,
                 station_id=record.station_id,

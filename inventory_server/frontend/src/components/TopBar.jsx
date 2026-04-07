@@ -1,6 +1,7 @@
 // src/components/TopBar.jsx
 import React, { useState, useEffect } from "react";
 import io from "socket.io-client";
+import { socketBaseUrl } from "../runtimeConfig";
 
 let socket;
 
@@ -10,7 +11,7 @@ function TopBar({ onSettingsClick }) {
     const [timerRunning, setTimerRunning] = useState(false);
 
     useEffect(() => {
-        socket = io("http://rtlsserver.local:3010");
+        socket = io(socketBaseUrl);
         socket.on("timer_start", (data) => {
             setRemainingTime(data.duration);
             setTimerRunning(true);

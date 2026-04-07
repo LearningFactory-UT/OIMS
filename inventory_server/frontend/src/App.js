@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import "./App.css";
 import AccessDeniedPage from "./pages/AccessDeniedPage";
@@ -78,6 +78,30 @@ export default function App() {
   const [route, setRoute] = useState(getRouteState);
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  const refreshSystemState = useCallback(async () => {
+    if (!authState.authenticated) {
+      return;
+    }
+    try {
+      const snapshot = await apiFetch("/api/system/state");
+      setSystemState((current) => ({ ...current, ...snapshot }));
+    } catch (error) {
+      console.error(error);
+    }
+  }, [authState.authenticated]);
+
+  const refreshTimerState = useCallback(async () => {
+    if (!authState.authenticated) {
+      return;
+    }
+    try {
+      const timer = await apiFetch("/api/timer/");
+      setSystemState((current) => ({ ...current, timer }));
+    } catch (error) {
+      console.error(error);
+    }
+  }, [authState.authenticated]);
+
   useEffect(() => {
     let active = true;
 
@@ -109,33 +133,66 @@ export default function App() {
       return undefined;
     }
 
-    let active = true;
-    const socket = getSocket();
-
-    async function loadState() {
-      try {
-        const snapshot = await apiFetch("/api/system/state");
-        if (active) {
-          setSystemState((current) => ({ ...current, ...snapshot }));
-        }
-      } catch (error) {
-        console.error(error);
-      }
+    if (authState.role !== "admin") {
+      disconnectSocket();
+      refreshSystemState();
+      refreshTimerState();
+      return undefined;
     }
+
+    const socket = getSocket();
 
     function handleStateSnapshot(snapshot) {
       setSystemState((current) => ({ ...current, ...snapshot }));
     }
 
-    loadState();
+    function handleTimerState(timer) {
+      setSystemState((current) => ({ ...current, timer }));
+    }
+
+    refreshSystemState();
+    refreshTimerState();
     socket.connect();
     socket.on("state_snapshot", handleStateSnapshot);
+    socket.on("timer_state", handleTimerState);
 
     return () => {
-      active = false;
       socket.off("state_snapshot", handleStateSnapshot);
+      socket.off("timer_state", handleTimerState);
     };
-  }, [authState.authenticated, authState.loading, authState.role, authState.station_id]);
+  }, [
+    authState.authenticated,
+    authState.loading,
+    authState.role,
+    authState.station_id,
+    refreshSystemState,
+    refreshTimerState,
+  ]);
+
+  useEffect(() => {
+    if (authState.loading || !authState.authenticated) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      refreshSystemState();
+    }, 2000);
+
+    return () => window.clearInterval(intervalId);
+  }, [authState.authenticated, authState.loading, refreshSystemState]);
+
+  useEffect(() => {
+    if (authState.loading || !authState.authenticated) {
+      return undefined;
+    }
+
+    refreshTimerState();
+    const intervalId = window.setInterval(() => {
+      refreshTimerState();
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [authState.authenticated, authState.loading, refreshTimerState]);
 
   useEffect(() => {
     function handlePopState() {
@@ -178,6 +235,10 @@ export default function App() {
     setAuthState({ loading: false, ...EMPTY_AUTH, ...sessionState });
   }
 
+  function handleTimerSnapshot(timer) {
+    setSystemState((current) => ({ ...current, timer }));
+  }
+
   const resolvedRoute = useMemo(() => {
     if (route === "/") {
       return defaultRouteForAuth(authState);
@@ -208,7 +269,7 @@ export default function App() {
           />
         );
       }
-      return <OrdersBoardPage systemState={systemState} />;
+      return <OrdersBoardPage onRefreshState={refreshSystemState} systemState={systemState} />;
     }
 
     if (resolvedRoute === "/tablet") {
@@ -233,6 +294,7 @@ export default function App() {
       return (
         <WorkstationPage
           currentTime={currentTime}
+          onRefreshState={refreshSystemState}
           stationId={authState.station_id}
           systemState={systemState}
         />
@@ -254,6 +316,7 @@ export default function App() {
       return (
         <ProvisionPage
           systemState={systemState}
+          onRefreshState={refreshSystemState}
           onOpenWorkstation={(stationId) => navigate(`/workstation/${stationId}`)}
         />
       );
@@ -275,6 +338,7 @@ export default function App() {
       return (
         <WorkstationPage
           currentTime={currentTime}
+          onRefreshState={refreshSystemState}
           stationId={stationId}
           systemState={systemState}
         />
@@ -293,7 +357,7 @@ export default function App() {
           />
         );
       }
-      return <OrdersBoardPage systemState={systemState} />;
+      return <OrdersBoardPage onRefreshState={refreshSystemState} systemState={systemState} />;
     }
 
     if (!authState.authenticated) {
@@ -312,7 +376,9 @@ export default function App() {
     return (
       <ControlPlanePage
         currentTime={currentTime}
+        onRefreshState={refreshSystemState}
         systemState={systemState}
+        onTimerSnapshot={handleTimerSnapshot}
         onOpenWorkstation={(stationId) => navigate(`/workstation/${stationId}`)}
       />
     );
@@ -320,6 +386,8 @@ export default function App() {
 
   const showAdminChrome =
     authState.authenticated && authState.role === "admin" && isAdminRoute(resolvedRoute);
+  const isWorkstationSurface =
+    resolvedRoute === "/tablet" || resolvedRoute.startsWith("/workstation/");
 
   return (
     <div className="app-shell">
@@ -370,7 +438,9 @@ export default function App() {
           </div>
         </header>
       ) : null}
-      <main className="app-body">{page}</main>
+      <main className={isWorkstationSurface ? "app-body workstation-app-body" : "app-body"}>
+        {page}
+      </main>
     </div>
   );
 }

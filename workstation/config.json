@@ -1,5 +1,5 @@
 {
-    "broker_hostname": "rtlsserver.local",
+    "broker_hostname": "your-oims-broker-hostname.local",
     "station_type": "workstation",
     "station_ID": "5"
 }

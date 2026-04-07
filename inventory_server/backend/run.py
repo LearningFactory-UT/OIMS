@@ -11,6 +11,11 @@ from settings import settings
 from socketio_instance import socketio
 
 
+class _IgnoreStaleSocketSessionFilter(logging.Filter):
+    def filter(self, record):
+        return "Invalid session" not in record.getMessage()
+
+
 def _apply_sqlite_migrations():
     inspector = inspect(engine)
     table_names = set(inspector.get_table_names())
@@ -83,5 +88,6 @@ if __name__ == "__main__":
     logging.getLogger("werkzeug").setLevel(logging.WARNING)
     logging.getLogger("engineio").setLevel(logging.WARNING)
     logging.getLogger("socketio").setLevel(logging.WARNING)
+    logging.getLogger("engineio.server").addFilter(_IgnoreStaleSocketSessionFilter())
 
     socketio.run(app, host=settings.host, port=settings.port)

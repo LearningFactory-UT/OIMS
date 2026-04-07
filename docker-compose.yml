@@ -8,10 +8,10 @@ services:
       OIMS_SECRET_KEY: ${OIMS_SECRET_KEY:-change-me}
       OIMS_ADMIN_USERNAME: ${OIMS_ADMIN_USERNAME:-admin}
       OIMS_ADMIN_PASSWORD: ${OIMS_ADMIN_PASSWORD:-change-me}
-      OIMS_BROKER_HOSTNAME: ${OIMS_BROKER_HOSTNAME:-rtlsserver.local}
+      OIMS_BROKER_HOSTNAME: ${OIMS_BROKER_HOSTNAME:?Set OIMS_BROKER_HOSTNAME in .env}
       OIMS_BROKER_PORT: 1883
       OIMS_DATABASE_URL: sqlite:////app/data/oims.db
-      OIMS_CORS_ORIGINS: ${OIMS_CORS_ORIGINS:-http://rtlsserver.local}
+      OIMS_CORS_ORIGINS: ${OIMS_CORS_ORIGINS:?Set OIMS_CORS_ORIGINS in .env}
     expose:
       - "3010"
     volumes:

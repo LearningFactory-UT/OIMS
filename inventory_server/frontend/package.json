@@ -854,7 +854,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test --watchAll=false"
   },
-  "proxy": "http://rtlsserver.local:3010",
+  "proxy": "http://localhost:3010",
   "author": "",
   "license": "ISC",
   "browserslist": {

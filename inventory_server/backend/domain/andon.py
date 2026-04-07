@@ -39,7 +39,7 @@ def derive_andon_state(inputs: AndonInputs) -> AndonState:
     )
     stopped = inputs.manual_state == "stop"
 
-    if not inputs.timer_running or not inputs.enabled or not active:
+    if not inputs.timer_running or not inputs.enabled:
         code = "R"
     else:
         code = "R" if idle or stopped else "G"
@@ -60,4 +60,3 @@ def derive_andon_state(inputs: AndonInputs) -> AndonState:
         idle=idle,
         stopped=stopped,
     )
-

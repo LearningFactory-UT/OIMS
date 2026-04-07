@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
+import DecisionModal from "../components/DecisionModal";
 import { apiFetch } from "../lib/api";
 
 function formatDeviceUsage(device) {
@@ -9,7 +10,7 @@ function formatDeviceUsage(device) {
   return new Date(device.last_used_at).toLocaleString();
 }
 
-export default function ProvisionPage({ systemState, onOpenWorkstation }) {
+export default function ProvisionPage({ systemState, onOpenWorkstation, onRefreshState }) {
   const devices = systemState.devices || [];
   const [stationId, setStationId] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -20,6 +21,7 @@ export default function ProvisionPage({ systemState, onOpenWorkstation }) {
   const [deviceStationId, setDeviceStationId] = useState("");
   const [deviceBusy, setDeviceBusy] = useState(false);
   const [issuedDevice, setIssuedDevice] = useState(null);
+  const [stationToDelete, setStationToDelete] = useState(null);
 
   const stationsById = useMemo(
     () =>
@@ -28,6 +30,10 @@ export default function ProvisionPage({ systemState, onOpenWorkstation }) {
       ),
     [systemState.stations]
   );
+
+  useEffect(() => {
+    onRefreshState?.();
+  }, [onRefreshState]);
 
   async function createStation(event) {
     event.preventDefault();
@@ -46,6 +52,7 @@ export default function ProvisionPage({ systemState, onOpenWorkstation }) {
           provisioned_by: "browser",
         }),
       });
+      await onRefreshState?.();
       onOpenWorkstation(station.station_id);
     } finally {
       setBusy(false);
@@ -73,6 +80,7 @@ export default function ProvisionPage({ systemState, onOpenWorkstation }) {
       });
       setIssuedDevice(device);
       setDeviceLabel("");
+      await onRefreshState?.();
     } finally {
       setDeviceBusy(false);
     }
@@ -88,6 +96,7 @@ export default function ProvisionPage({ systemState, onOpenWorkstation }) {
       setIssuedDevice((current) =>
         current?.device_id === updatedDevice.device_id ? updatedDevice : current
       );
+      await onRefreshState?.();
     } finally {
       setDeviceBusy(false);
     }
@@ -100,8 +109,29 @@ export default function ProvisionPage({ systemState, onOpenWorkstation }) {
         method: "POST",
       });
       setIssuedDevice(rotated);
+      await onRefreshState?.();
     } finally {
       setDeviceBusy(false);
+    }
+  }
+
+  async function confirmDeleteStation() {
+    if (!stationToDelete) {
+      return;
+    }
+
+    setBusy(true);
+    try {
+      await apiFetch(`/api/stations/${stationToDelete.station_id}`, {
+        method: "DELETE",
+      });
+      await onRefreshState?.();
+      if (deviceStationId === stationToDelete.station_id) {
+        setDeviceStationId("");
+      }
+      setStationToDelete(null);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -129,12 +159,21 @@ export default function ProvisionPage({ systemState, onOpenWorkstation }) {
                   <p className="station-meta">
                     Tablet devices: {boundDevices.length || 0}
                   </p>
-                  <button
-                    className="primary-button"
-                    onClick={() => onOpenWorkstation(station.station_id)}
-                  >
-                    Open workstation
-                  </button>
+                  <div className="button-row wrap">
+                    <button
+                      className="primary-button"
+                      onClick={() => onOpenWorkstation(station.station_id)}
+                    >
+                      Open workstation
+                    </button>
+                    <button
+                      className="danger-button"
+                      disabled={busy}
+                      onClick={() => setStationToDelete(station)}
+                    >
+                      Delete workstation
+                    </button>
+                  </div>
                 </article>
               );
             })}
@@ -288,6 +327,17 @@ export default function ProvisionPage({ systemState, onOpenWorkstation }) {
           </div>
         </div>
       </section>
+
+      {stationToDelete ? (
+        <DecisionModal
+          title="Delete workstation"
+          message={`Delete workstation ${stationToDelete.display_name} (${stationToDelete.station_id})? This will remove its active orders and bound tablet devices.`}
+          confirmLabel="Delete workstation"
+          cancelLabel="Cancel"
+          onConfirm={confirmDeleteStation}
+          onCancel={() => setStationToDelete(null)}
+        />
+      ) : null}
     </div>
   );
 }

@@ -11,6 +11,7 @@ export function getSocket() {
       upgrade: false,
       autoConnect: false,
       withCredentials: true,
+      closeOnBeforeunload: true,
     });
   }
   return socket;

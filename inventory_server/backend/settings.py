@@ -44,8 +44,8 @@ def load_settings() -> Settings:
         [
             "http://localhost:3000",
             "http://127.0.0.1:3000",
-            "http://rtlsserver.local",
-            "http://rtlsserver.local:3000",
+            "http://localhost",
+            "http://127.0.0.1",
         ]
     )
     cors_origins = [
@@ -62,7 +62,7 @@ def load_settings() -> Settings:
         admin_password=os.getenv("OIMS_ADMIN_PASSWORD", "change-me"),
         broker_hostname=os.getenv(
             "OIMS_BROKER_HOSTNAME",
-            json_defaults.get("broker_hostname", "rtlsserver.local"),
+            json_defaults.get("broker_hostname", "localhost"),
         ),
         broker_port=int(os.getenv("OIMS_BROKER_PORT", json_defaults.get("port", 1883))),
         database_url=database_url,

@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 
 from routes.auth_routes import auth_bp
@@ -31,5 +31,13 @@ def create_app():
     app.register_blueprint(help_bp, url_prefix="/api/help")
     app.register_blueprint(manager_bp, url_prefix="/api/manager")
     app.register_blueprint(station_bp, url_prefix="/api/stations")
+
+    @app.after_request
+    def add_no_store_headers(response):
+        if request.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        return response
 
     return app

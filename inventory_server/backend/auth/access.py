@@ -91,8 +91,18 @@ def get_current_access_context() -> AccessContext:
         )
         if device_context is None:
             clear_auth_session()
-            return _cache_context(AccessContext())
-        return _cache_context(device_context)
+        else:
+            return _cache_context(device_context)
+
+    raw_device_token = request.headers.get("X-OIMS-Device-Token", "").strip()
+    if raw_device_token:
+        from services.auth_service import AuthService
+
+        token_context = AuthService.get_instance().get_access_context_for_raw_token(
+            raw_device_token
+        )
+        if token_context is not None:
+            return _cache_context(token_context)
 
     clear_auth_session()
     return _cache_context(AccessContext())

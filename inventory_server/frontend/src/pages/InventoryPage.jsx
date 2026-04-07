@@ -4,6 +4,7 @@ import io from "socket.io-client";
 import OrdersList from "../components/OrdersList";
 import TopBar from "../components/TopBar";
 import Modal from "../components/Modal";  // import our reusable modal
+import { apiBaseUrl, socketBaseUrl } from "../runtimeConfig";
 
 function InventoryPage() {
     const [orders, setOrders] = useState([]);
@@ -14,7 +15,7 @@ function InventoryPage() {
     const [assemblyType, setAssemblyType] = useState("standard");
 
     useEffect(() => {
-        const newSocket = io("http://rtlsserver.local:3010");
+        const newSocket = io(socketBaseUrl);
         setSocket(newSocket);
 
         newSocket.on("orders_updated", (data) => {
@@ -32,7 +33,7 @@ function InventoryPage() {
             ));
         });
 
-        fetch("/api/orders")
+        fetch(`${apiBaseUrl}/api/orders`)
             .then((res) => res.json())
             .then((fetchedOrders) => setOrders(fetchedOrders))
             .catch((err) => console.error(err));

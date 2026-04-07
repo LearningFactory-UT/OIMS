@@ -1,6 +1,6 @@
 {
-  "api_base_url": "http://rtlsserver.local:3010",
-  "ui_base_url": "http://rtlsserver.local",
+  "api_base_url": "http://localhost:3010",
+  "ui_base_url": "http://localhost:3000",
   "device_role": "tablet",
   "station_id": "",
   "device_token": "",

@@ -29,11 +29,17 @@ function formatRelative(timestamp) {
 export default function ControlPlanePage({
   currentTime,
   systemState,
+  onRefreshState,
+  onTimerSnapshot,
   onOpenWorkstation,
 }) {
   const [minutes, setMinutes] = useState(30);
   const [assemblyType, setAssemblyType] = useState(systemState.assembly_type);
   const [busyAction, setBusyAction] = useState("");
+
+  useEffect(() => {
+    onRefreshState?.();
+  }, [onRefreshState]);
 
   useEffect(() => {
     setAssemblyType(systemState.assembly_type);
@@ -47,17 +53,23 @@ export default function ControlPlanePage({
     () => systemState.orders.filter((order) => !order.urgent),
     [systemState.orders]
   );
+  const onlineStations = useMemo(
+    () => systemState.stations.filter((station) => station.health === "online").length,
+    [systemState.stations]
+  );
 
   async function runTimerCommand(command) {
     setBusyAction(`timer:${command}`);
     try {
-      await apiFetch("/api/timer/", {
+      const timer = await apiFetch("/api/timer/", {
         method: "POST",
         body: JSON.stringify({
           command,
           seconds: Number(minutes) * 60,
         }),
       });
+      onTimerSnapshot?.(timer);
+      await onRefreshState?.();
     } finally {
       setBusyAction("");
     }
@@ -89,105 +101,124 @@ export default function ControlPlanePage({
 
   return (
     <div className="page-grid">
-      <section className="hero-panel">
+      <section className="control-plane-heading">
         <div>
           <p className="eyebrow">Control Plane</p>
-          <h1>Live station orchestration</h1>
-          <p className="hero-copy">
-            Central timer control, station health, and order visibility now come
-            from the backend state projection instead of local tablet logic.
-          </p>
         </div>
-        <div className="hero-stats">
-          <div className="stat-card">
-            <span className="stat-label">Timer</span>
-            <strong>{formatTimer(systemState.timer, currentTime)}</strong>
-            <span className="stat-meta">{systemState.timer.state}</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-label">Stations</span>
-            <strong>{systemState.summary.stations}</strong>
-            <span className="stat-meta">
-              {systemState.stations.filter((station) => station.health === "online").length} online
-            </span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-label">Orders</span>
-            <strong>{systemState.summary.active_orders}</strong>
-            <span className="stat-meta">
-              {systemState.summary.urgent_orders} urgent
-            </span>
-          </div>
-        </div>
+        <h1 className="control-plane-title">Live station orchestration</h1>
       </section>
 
-      <section className="panel">
-        <div className="panel-header">
-          <div>
-            <p className="eyebrow">Session Control</p>
-            <h2>Timer and assembly mode</h2>
+      <section className="control-plane-dashboard">
+        <article className="panel compact-control-panel timer-control-panel">
+          <div className="panel-header compact-panel-header">
+            <div>
+              <p className="eyebrow">Session Control</p>
+              <h2>Timer controls</h2>
+            </div>
           </div>
-        </div>
-        <div className="control-grid">
-          <label className="field">
-            <span>Start timer (minutes)</span>
-            <input
-              type="number"
-              min="1"
-              value={minutes}
-              onChange={(event) => setMinutes(event.target.value)}
-            />
-          </label>
-          <div className="button-row">
-            <button
-              className="primary-button"
-              disabled={busyAction === "timer:start"}
-              onClick={() => runTimerCommand("start")}
-            >
-              Start
-            </button>
-            <button
-              className="ghost-button"
-              disabled={busyAction === "timer:pause"}
-              onClick={() => runTimerCommand("pause")}
-            >
-              Pause
-            </button>
-            <button
-              className="ghost-button"
-              disabled={busyAction === "timer:resume"}
-              onClick={() => runTimerCommand("resume")}
-            >
-              Resume
-            </button>
-            <button
-              className="danger-button"
-              disabled={busyAction === "timer:stop"}
-              onClick={() => runTimerCommand("stop")}
-            >
-              Stop
-            </button>
+          <div className="control-grid compact-control-grid">
+            <label className="field">
+              <span>Start timer (minutes)</span>
+              <input
+                type="number"
+                min="1"
+                value={minutes}
+                onChange={(event) => setMinutes(event.target.value)}
+              />
+            </label>
+            <div className="button-row wrap">
+              <button
+                className="primary-button"
+                disabled={busyAction === "timer:start"}
+                onClick={() => runTimerCommand("start")}
+              >
+                Start
+              </button>
+              <button
+                className="ghost-button"
+                disabled={busyAction === "timer:pause"}
+                onClick={() => runTimerCommand("pause")}
+              >
+                Pause
+              </button>
+              <button
+                className="ghost-button"
+                disabled={busyAction === "timer:resume"}
+                onClick={() => runTimerCommand("resume")}
+              >
+                Resume
+              </button>
+              <button
+                className="danger-button"
+                disabled={busyAction === "timer:stop"}
+                onClick={() => runTimerCommand("stop")}
+              >
+                Stop
+              </button>
+            </div>
           </div>
-          <label className="field">
-            <span>Assembly type</span>
-            <select
-              value={assemblyType}
-              onChange={(event) => setAssemblyType(event.target.value)}
-            >
-              <option value="standard">Standard</option>
-              <option value="simplified">Simplified</option>
-            </select>
-          </label>
-          <div className="button-row">
-            <button
-              className="primary-button"
-              disabled={busyAction === "assembly"}
-              onClick={saveAssemblyType}
-            >
-              Save assembly type
-            </button>
+        </article>
+
+        <article className="panel compact-control-panel overview-panel">
+          <div className="panel-header compact-panel-header">
+            <div>
+              <p className="eyebrow">Overview</p>
+              <h2>Factory status</h2>
+            </div>
           </div>
-        </div>
+          <div className="overview-grid">
+            <div className="overview-metric">
+              <span className="overview-label">Time left</span>
+              <strong className="overview-value">
+                {formatTimer(systemState.timer, currentTime)}
+              </strong>
+            </div>
+            <div className="overview-metric">
+              <span className="overview-label">Timer state</span>
+              <strong className="overview-value overview-state">
+                {systemState.timer.state}
+              </strong>
+            </div>
+            <div className="overview-metric">
+              <span className="overview-label">Workstations</span>
+              <strong className="overview-value">{systemState.summary.stations}</strong>
+            </div>
+            <div className="overview-metric">
+              <span className="overview-label">Online</span>
+              <strong className="overview-value">{onlineStations}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article className="panel compact-control-panel assembly-control-panel">
+          <div className="panel-header compact-panel-header">
+            <div>
+              <p className="eyebrow">Configuration</p>
+              <h2>Assembly control</h2>
+            </div>
+          </div>
+          <div className="control-grid compact-control-grid">
+            <label className="field">
+              <span>Assembly type</span>
+              <select
+                value={assemblyType}
+                onChange={(event) => setAssemblyType(event.target.value)}
+              >
+                <option value="standard">Standard</option>
+                <option value="simplified">Simplified</option>
+              </select>
+            </label>
+            <div className="button-row">
+              <button
+                className="primary-button"
+                disabled={busyAction === "assembly"}
+                onClick={saveAssemblyType}
+              >
+                Save assembly type
+              </button>
+            </div>
+          </div>
+        </article>
       </section>
 
       <section className="panel">

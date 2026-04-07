@@ -7,6 +7,7 @@ from typing import Any, Optional
 from domain.andon import AndonInputs, derive_andon_state
 from domain.entities import HelpRequest, OperatorState, Order, Station, TransferRequest
 from models.db_models import (
+    DeviceModel,
     EventLogModel,
     OrderModel,
     StationModel,
@@ -399,6 +400,70 @@ class InventoryService:
         self.emit_state_snapshot()
         return self.get_station_state(station_id)
 
+    def delete_station(self, station_id: str, emit: bool = True) -> dict:
+        station_id = str(station_id)
+        if station_id not in self.station_registry:
+            alias_station_id = self.station_alias_index.get(station_id)
+            if alias_station_id:
+                station_id = alias_station_id
+            else:
+                raise ValueError(f"Unknown station '{station_id}'.")
+
+        station = self.station_registry[station_id]
+        deleted_display_name = station.display_name
+        deleted_orders = [
+            order_id
+            for order_id, order in self.orders_dict.items()
+            if order.station_id == station_id
+        ]
+
+        for side in ["L", "R"]:
+            self.andon_service.update_lights(station_id, side, "R")
+
+        for order_id in deleted_orders:
+            self.remove_order(order_id, reason="station_deleted", emit=False)
+
+        session = SessionLocal()
+        try:
+            deleted_devices = (
+                session.query(DeviceModel)
+                .filter(DeviceModel.station_id == station_id)
+                .delete(synchronize_session=False)
+            )
+            session.query(StationSideStateModel).filter(
+                StationSideStateModel.original_ws_id == station_id
+            ).delete(synchronize_session=False)
+            session.query(StationModel).filter(
+                StationModel.original_ws_id == station_id
+            ).delete(synchronize_session=False)
+            session.commit()
+        finally:
+            session.close()
+
+        self.station_alias_index.pop(deleted_display_name, None)
+        self.station_registry.pop(station_id, None)
+        self.side_state_store.pop(station_id, None)
+
+        self._record_event(
+            "station_deleted",
+            station_id=station_id,
+            payload={
+                "display_name": deleted_display_name,
+                "removed_orders": len(deleted_orders),
+                "removed_devices": deleted_devices,
+            },
+        )
+
+        if emit:
+            self.emit_state_snapshot()
+
+        return {
+            "station_id": station_id,
+            "display_name": deleted_display_name,
+            "removed_orders": len(deleted_orders),
+            "removed_devices": deleted_devices,
+        }
+
     def set_ws_id(self, original_ws_id: str, ws_id: str) -> dict:
         original_ws_id = str(original_ws_id)
         ws_id = str(ws_id).strip() or original_ws_id
@@ -519,6 +584,13 @@ class InventoryService:
         timestamp = datetime.utcnow().strftime("%H%M%S%f")
         return f"WS{station_id}_{timestamp}"
 
+    def _reset_manual_state_for_side(self, station_id: str, side: str) -> bool:
+        side_state = self.side_state_store[station_id][side]
+        if side_state["manual_state"] == "reset":
+            return False
+        side_state["manual_state"] = "reset"
+        return True
+
     def _normalize_order_payload(self, order_data: dict, source: str) -> dict:
         if "attributes" in order_data:
             attributes = order_data["attributes"]
@@ -565,6 +637,7 @@ class InventoryService:
 
         station_id = normalized["station_id"]
         self.register_station(station_id, ws_id=normalized["display_name"], emit=False)
+        self._reset_manual_state_for_side(station_id, normalized["side"])
 
         new_order = Order(
             order_id=order_id,
@@ -722,6 +795,7 @@ class InventoryService:
 
         side_state = self.side_state_store[station_id][side]
         if help_dict["help"]:
+            self._reset_manual_state_for_side(station_id, side)
             side_state["help_id"] = help_dict["help_id"]
             side_state["help_idle"] = bool(help_dict.get("idle", False))
             side_state["help_created_at"] = datetime.utcnow()
@@ -759,6 +833,7 @@ class InventoryService:
 
         side_state = self.side_state_store[station_id][side]
         if prev_ws_order_dict["pending"]:
+            self._reset_manual_state_for_side(station_id, side)
             side_state["prev_ws_order_id"] = prev_ws_order_dict["prev_ws_order_id"]
             side_state["prev_ws_order_idle"] = bool(prev_ws_order_dict.get("idle", False))
             side_state["prev_ws_order_created_at"] = datetime.utcnow()

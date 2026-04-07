@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 
 import { apiFetch } from "../lib/api";
+import { getStoredDeviceToken, storeDeviceToken } from "../lib/deviceAuth";
 
 function getTokenFromLocation() {
   const params = new URLSearchParams(window.location.search);
@@ -15,7 +16,10 @@ export default function DeviceBootstrapPage({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const token = useMemo(() => getTokenFromLocation(), []);
+  const token = useMemo(
+    () => getTokenFromLocation() || getStoredDeviceToken(expectedRole),
+    [expectedRole]
+  );
 
   useEffect(() => {
     if (!token) {
@@ -39,6 +43,7 @@ export default function DeviceBootstrapPage({
           setError(`This token is not allowed to open the ${expectedRole} surface.`);
           return;
         }
+        storeDeviceToken(expectedRole, token);
         window.history.replaceState({}, "", window.location.pathname);
         onAuthenticated(session);
       } catch (requestError) {
@@ -71,8 +76,8 @@ export default function DeviceBootstrapPage({
         {busy ? <p className="muted-copy">Authenticating device token...</p> : null}
         {!busy && !token ? (
           <p className="auth-error">
-            No bootstrap token was found in the URL. Launch this surface from the
-            configured tablet or inventory device.
+            No bootstrap token was found in the URL or local device storage. Launch
+            this surface from the configured tablet or inventory device.
           </p>
         ) : null}
         {error ? <p className="auth-error">{error}</p> : null}

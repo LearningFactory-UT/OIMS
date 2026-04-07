@@ -62,9 +62,11 @@ python3 launcher.py
 
 ## Deployment
 
-- Production on `rtlsserver`: [docs/rtlsserver-deployment.md](/Users/giovannichiementin/Desktop/Work%20in%20progress/OIMS/docs/rtlsserver-deployment.md)
+- Production on a configurable OIMS server host: [docs/server-deployment.md](/Users/giovannichiementin/Desktop/Work%20in%20progress/OIMS/docs/server-deployment.md)
 - Docker Compose: `docker compose up --build`
 - Native service examples: `deploy/systemd/`
+
+For production, do not hardcode a factory-specific server name. Set the actual LAN hostname through `.env`, launcher config, and device config.
 
 ## MQTT Contract
 

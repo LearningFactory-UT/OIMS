@@ -1,6 +1,6 @@
 ###### DEPRECATED ######
 ### This module inventory.py has been rewritten in javascript and 
-### it is now running on the ThinkStation (http://rtlsserver.local)
+### it is now hosted by the central OIMS server web UI
 
 
 import math
@@ -898,5 +898,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 

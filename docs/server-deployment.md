@@ -1,12 +1,12 @@
-# `rtlsserver` Deployment Guide
+# OIMS Server Deployment Guide
 
-This is the recommended production flow for OIMS 2.0 on the Ubuntu-based `rtlsserver` machine.
+This is the recommended production flow for OIMS 2.0 on the Ubuntu-based machine that will host the OIMS server. The machine hostname is configurable and should be supplied through deployment configuration, not hardcoded in the codebase.
 
 ## 1. Prerequisites
 
 - Docker Engine with the Compose plugin
-- The production Mosquitto broker already reachable at `rtlsserver.local:1883`
-- DNS or mDNS resolution for `rtlsserver.local` on the factory LAN
+- The production Mosquitto broker already reachable at `<broker-hostname>:1883`
+- DNS or mDNS resolution for your chosen OIMS server hostname on the factory LAN
 
 ## 2. Install the stack
 
@@ -24,8 +24,8 @@ Edit `.env` and set at least:
 - `OIMS_SECRET_KEY`
 - `OIMS_ADMIN_USERNAME`
 - `OIMS_ADMIN_PASSWORD`
-- `OIMS_BROKER_HOSTNAME=rtlsserver.local`
-- `OIMS_CORS_ORIGINS=http://rtlsserver.local`
+- `OIMS_BROKER_HOSTNAME=<broker-hostname>`
+- `OIMS_CORS_ORIGINS=http://<oims-server-hostname>`
 
 ## 3. Start the services
 
@@ -35,14 +35,14 @@ docker compose up -d --build
 
 The production stack serves:
 
-- frontend and reverse proxy at `http://rtlsserver.local`
+- frontend and reverse proxy at `http://<oims-server-hostname>`
 - backend internally on `backend:3010`
 
 The backend database is persisted at `./data/backend/oims.db`.
 
 ## 4. First admin login
 
-Open `http://rtlsserver.local/admin` and sign in with the admin credentials from `.env`.
+Open `http://<oims-server-hostname>/admin` and sign in with the admin credentials from `.env`.
 
 From the admin surface:
 
@@ -71,7 +71,7 @@ Enter:
 
 The launcher opens:
 
-- `http://rtlsserver.local/tablet?token=...`
+- `http://<oims-server-hostname>/tablet?token=...`
 
 The tablet surface remembers the locally stored station assignment and is restricted to that single workstation.
 
@@ -92,7 +92,7 @@ Enter:
 
 The launcher opens:
 
-- `http://rtlsserver.local/inventory?token=...`
+- `http://<oims-server-hostname>/inventory?token=...`
 
 This surface is read-only and only shows the orders board.
 
@@ -101,13 +101,13 @@ This surface is read-only and only shows the orders board.
 Backend health:
 
 ```bash
-curl http://rtlsserver.local/api/system/health
+curl http://<oims-server-hostname>/api/system/health
 ```
 
 Watch MQTT orders on the live broker:
 
 ```bash
-mosquitto_sub -h rtlsserver.local -t /ws_manager/orders -v
+mosquitto_sub -h <broker-hostname> -t /ws_manager/orders -v
 ```
 
 Create an order from station `2` and verify the payload contains:
@@ -120,7 +120,7 @@ Create an order from station `2` and verify the payload contains:
 
 ## 8. Operational notes
 
-- Admin surface: `http://rtlsserver.local/admin`
-- Inventory surface: `http://rtlsserver.local/inventory`
-- Tablet surface: `http://rtlsserver.local/tablet`
+- Admin surface: `http://<oims-server-hostname>/admin`
+- Inventory surface: `http://<oims-server-hostname>/inventory`
+- Tablet surface: `http://<oims-server-hostname>/tablet`
 - Legacy workstation Python client remains in the repo for compatibility testing, but the production path is the web tablet plus launcher flow.

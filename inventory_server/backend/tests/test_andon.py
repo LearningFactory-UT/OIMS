@@ -64,7 +64,26 @@ class AndonStateTests(unittest.TestCase):
 
         self.assertEqual(state.code, "RB")
 
+    def test_running_timer_with_no_active_flags_defaults_to_green(self):
+        state = derive_andon_state(
+            AndonInputs(
+                station_id="station-1",
+                side="R",
+                timer_running=True,
+                enabled=True,
+                manual_state="reset",
+                pending_orders=0,
+                urgent_orders=0,
+                help_requested=False,
+                help_idle=False,
+                waiting_from_previous=False,
+                waiting_from_previous_idle=False,
+                ready_for_next=False,
+            )
+        )
+
+        self.assertEqual(state.code, "G")
+
 
 if __name__ == "__main__":
     unittest.main()
-
