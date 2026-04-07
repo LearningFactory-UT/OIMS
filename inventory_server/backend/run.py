@@ -90,4 +90,9 @@ if __name__ == "__main__":
     logging.getLogger("socketio").setLevel(logging.WARNING)
     logging.getLogger("engineio.server").addFilter(_IgnoreStaleSocketSessionFilter())
 
-    socketio.run(app, host=settings.host, port=settings.port)
+    socketio.run(
+        app,
+        host=settings.host,
+        port=settings.port,
+        allow_unsafe_werkzeug=True,
+    )
