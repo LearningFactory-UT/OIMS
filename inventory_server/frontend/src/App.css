@@ -29,6 +29,11 @@
   color: var(--text-main);
 }
 
+.app-shell.workstation-app-shell {
+  height: 100vh;
+  overflow: hidden;
+}
+
 .app-header {
   display: flex;
   align-items: center;
@@ -112,6 +117,7 @@
 }
 
 .app-body.workstation-app-body {
+  height: 100%;
   padding: 0;
   overflow: hidden;
 }
@@ -469,6 +475,13 @@
   color: var(--text-main);
 }
 
+.operator-order-items {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
 .order-card.urgent {
   border-color: rgba(214, 181, 91, 0.36);
   box-shadow: inset 0 0 0 1px rgba(214, 181, 91, 0.18);
@@ -483,6 +496,7 @@
 .operator-layout {
   flex: 1 1 auto;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   overflow: hidden;
 }
@@ -774,6 +788,7 @@
   display: flex;
   flex-direction: column;
   gap: 0;
+  flex: 1 1 auto;
   height: 100%;
   min-height: 0;
   overflow: hidden;
@@ -782,6 +797,7 @@
 .workstation-content {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   gap: 0.85rem;
   min-height: 0;
   overflow: hidden;
@@ -791,6 +807,7 @@
 .workstation-parts-panel {
   flex: 0 0 auto;
   padding: 0.85rem 0.95rem;
+  overflow: hidden;
 }
 
 .workstation-parts-panel .panel-header {
@@ -818,17 +835,22 @@
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.2rem;
   min-height: 0;
   overflow: hidden;
 }
 
-.operator-order-list {
+.operator-order-list,
+.operator-order-list.order-list.compact {
   flex: 1 1 auto;
+  display: grid;
   min-height: 0;
+  max-height: 100%;
+  margin-top: 0;
   overflow: auto;
   padding-right: 0.2rem;
   align-content: start;
+  overscroll-behavior: contain;
 }
 
 .operator-order-list::-webkit-scrollbar {

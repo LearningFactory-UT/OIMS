@@ -249,6 +249,19 @@ export default function App() {
     return route;
   }, [authState, route]);
 
+  const isWorkstationSurface =
+    resolvedRoute === "/tablet" || resolvedRoute.startsWith("/workstation/");
+
+  useEffect(() => {
+    document.body.classList.toggle("workstation-mode", isWorkstationSurface);
+    document.documentElement.classList.toggle("workstation-mode", isWorkstationSurface);
+
+    return () => {
+      document.body.classList.remove("workstation-mode");
+      document.documentElement.classList.remove("workstation-mode");
+    };
+  }, [isWorkstationSurface]);
+
   const page = useMemo(() => {
     if (resolvedRoute === "/inventory") {
       if (!authState.authenticated) {
@@ -386,11 +399,9 @@ export default function App() {
 
   const showAdminChrome =
     authState.authenticated && authState.role === "admin" && isAdminRoute(resolvedRoute);
-  const isWorkstationSurface =
-    resolvedRoute === "/tablet" || resolvedRoute.startsWith("/workstation/");
 
   return (
-    <div className="app-shell">
+    <div className={isWorkstationSurface ? "app-shell workstation-app-shell" : "app-shell"}>
       {showAdminChrome ? (
         <header className="app-header">
           <div className="brand-block">

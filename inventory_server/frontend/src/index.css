@@ -18,6 +18,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+html.workstation-mode,
+body.workstation-mode {
+  overflow: hidden;
+}
+
 button,
 input,
 select {

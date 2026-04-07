@@ -441,12 +441,6 @@ export default function WorkstationPage({ currentTime, onRefreshState, stationId
             interactionEnabled ? "" : " is-locked"
           }`}
         >
-          <div className="panel-header compact-panel-header">
-            <div>
-              <p className="eyebrow">Order Builder</p>
-              <h2>Shared parts</h2>
-            </div>
-          </div>
           <div className="shared-item-rows" style={{ "--row-columns": firstRowCount }}>
             <div className="shared-item-row">{topRowItems.map(renderItemCard)}</div>
             {bottomRowItems.length > 0 ? (
@@ -552,12 +546,13 @@ export default function WorkstationPage({ currentTime, onRefreshState, stationId
                 </div>
 
                 <section className="order-list-shell">
-                  <p className="eyebrow">Active orders</p>
+                  <p className="eyebrow">
+                    Active orders: {sideOrders.length} · oldest first
+                  </p>
                   <div className="order-list compact operator-order-list">
                     {sideOrders.map((order) => (
                       <div key={order.order_id} className="order-card">
-                        <strong>{order.order_id}</strong>
-                        <small>{formatOrderItems(order.items_dict)}</small>
+                        <p className="operator-order-items">{formatOrderItems(order.items_dict)}</p>
                         <div className="button-row wrap">
                           <button
                             className="ghost-button"
@@ -566,7 +561,7 @@ export default function WorkstationPage({ currentTime, onRefreshState, stationId
                             }
                             onClick={() => updateOrder(order.order_id, !order.urgent)}
                           >
-                            Mark {order.urgent ? "standard" : "urgent"}
+                            Make {order.urgent ? "standard" : "urgent"}
                           </button>
                           <button
                             className="primary-button"
