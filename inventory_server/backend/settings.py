@@ -35,6 +35,7 @@ class Settings:
     cors_origins: list[str]
     bootstrap_token: str
     station_heartbeat_timeout_seconds: int
+    device_token_length: int
 
 
 def load_settings() -> Settings:
@@ -71,6 +72,7 @@ def load_settings() -> Settings:
         station_heartbeat_timeout_seconds=int(
             os.getenv("OIMS_STATION_HEARTBEAT_TIMEOUT_SECONDS", "45")
         ),
+        device_token_length=max(4, int(os.getenv("OIMS_DEVICE_TOKEN_LENGTH", "6"))),
     )
 
 

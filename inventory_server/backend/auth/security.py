@@ -3,13 +3,21 @@ from __future__ import annotations
 import hashlib
 import secrets
 
+from settings import settings
+
+
+DEVICE_TOKEN_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
 
 def generate_device_id() -> str:
     return f"dev_{secrets.token_hex(6)}"
 
 
-def generate_device_token(role: str) -> str:
-    return f"oims_{role}_{secrets.token_urlsafe(24)}"
+def generate_device_token(_role: str) -> str:
+    return "".join(
+        secrets.choice(DEVICE_TOKEN_ALPHABET)
+        for _ in range(settings.device_token_length)
+    )
 
 
 def hash_token(token: str) -> str:
