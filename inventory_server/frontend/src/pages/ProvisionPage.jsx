@@ -10,6 +10,26 @@ function formatDeviceUsage(device) {
   return new Date(device.last_used_at).toLocaleString();
 }
 
+function buildBootstrapUrl(device) {
+  const origin = window.location.origin;
+  const path = device.role === "inventory" ? "/inventory" : "/tablet";
+  return `${origin}${path}?token=${encodeURIComponent(device.token)}`;
+}
+
+function fallbackCopyText(text) {
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  const copied = document.execCommand("copy");
+  document.body.removeChild(textarea);
+  return copied;
+}
+
 export default function ProvisionPage({ systemState, onOpenWorkstation, onRefreshState }) {
   const devices = systemState.devices || [];
   const [stationId, setStationId] = useState("");
@@ -21,6 +41,7 @@ export default function ProvisionPage({ systemState, onOpenWorkstation, onRefres
   const [deviceStationId, setDeviceStationId] = useState("");
   const [deviceBusy, setDeviceBusy] = useState(false);
   const [issuedDevice, setIssuedDevice] = useState(null);
+  const [copyMessage, setCopyMessage] = useState("");
   const [stationToDelete, setStationToDelete] = useState(null);
 
   const stationsById = useMemo(
@@ -109,9 +130,30 @@ export default function ProvisionPage({ systemState, onOpenWorkstation, onRefres
         method: "POST",
       });
       setIssuedDevice(rotated);
+      setCopyMessage("");
       await onRefreshState?.();
     } finally {
       setDeviceBusy(false);
+    }
+  }
+
+  async function copyBootstrapUrl() {
+    if (!issuedDevice?.token) {
+      return;
+    }
+
+    const bootstrapUrl = buildBootstrapUrl(issuedDevice);
+
+    try {
+      if (window.isSecureContext && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(bootstrapUrl);
+      } else if (!fallbackCopyText(bootstrapUrl)) {
+        throw new Error("Clipboard copy failed");
+      }
+      setCopyMessage("Bootstrap URL copied.");
+    } catch (error) {
+      console.error(error);
+      setCopyMessage("Unable to copy automatically. Copy it manually below.");
     }
   }
 
@@ -266,9 +308,18 @@ export default function ProvisionPage({ systemState, onOpenWorkstation, onRefres
               <p className="eyebrow">Copy Once</p>
               <h3>{issuedDevice.label}</h3>
               <p className="muted-copy">
-                Store this token in the tablet launcher or inventory kiosk configuration.
+                Open this URL once on the target device to bootstrap kiosk access.
               </p>
-              <div className="token-value">{issuedDevice.token}</div>
+              <div className="token-value">{buildBootstrapUrl(issuedDevice)}</div>
+              <div className="button-row wrap token-actions">
+                <button className="primary-button" onClick={copyBootstrapUrl} type="button">
+                  Copy bootstrap URL
+                </button>
+              </div>
+              {copyMessage ? <p className="station-meta">{copyMessage}</p> : null}
+              <p className="station-meta">
+                Raw token for the optional launcher: <span className="token-inline">{issuedDevice.token}</span>
+              </p>
             </div>
           ) : null}
         </div>

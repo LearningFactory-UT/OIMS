@@ -960,6 +960,16 @@
   overflow-wrap: anywhere;
 }
 
+.token-actions {
+  margin-top: 0.8rem;
+}
+
+.token-inline {
+  font-family: "SFMono-Regular", "Menlo", monospace;
+  color: var(--text-main);
+  overflow-wrap: anywhere;
+}
+
 .board-meta {
   margin-top: 0.25rem;
   color: var(--text-muted);
