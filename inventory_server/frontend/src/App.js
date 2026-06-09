@@ -76,14 +76,8 @@ function stateEndpointForRoute(authState, route) {
   if (!authState.authenticated) {
     return null;
   }
-  if (authState.role === "inventory") {
-    return "/api/system/orders";
-  }
   if (authState.role === "tablet") {
     return "/api/system/tablet-state";
-  }
-  if (route === "/orders-board") {
-    return "/api/system/orders";
   }
   return "/api/system/state";
 }
@@ -92,13 +86,30 @@ function statePollIntervalForRoute(authState, route) {
   if (!authState.authenticated) {
     return null;
   }
-  if (["inventory", "tablet"].includes(authState.role) || route === "/orders-board") {
+  if (["admin", "inventory", "tablet"].includes(authState.role) || route === "/orders-board") {
     return 2000;
   }
-  if (authState.role === "admin") {
-    return 10000;
-  }
   return 5000;
+}
+
+function markTimerReceived(timer) {
+  if (!timer) {
+    return timer;
+  }
+  return {
+    ...timer,
+    client_received_at: new Date().toISOString(),
+  };
+}
+
+function markSnapshotReceived(snapshot) {
+  if (!snapshot?.timer) {
+    return snapshot;
+  }
+  return {
+    ...snapshot,
+    timer: markTimerReceived(snapshot.timer),
+  };
 }
 
 export default function App() {
@@ -132,12 +143,24 @@ export default function App() {
       return;
     }
     try {
-      const snapshot = await apiFetch(stateEndpoint);
+      const snapshot = markSnapshotReceived(await apiFetch(stateEndpoint));
       setSystemState((current) => ({ ...current, ...snapshot }));
     } catch (error) {
       console.error(error);
     }
   }, [stateEndpoint]);
+
+  const refreshTimerState = useCallback(async () => {
+    if (!authState.authenticated) {
+      return;
+    }
+    try {
+      const timer = markTimerReceived(await apiFetch("/api/timer/"));
+      setSystemState((current) => ({ ...current, timer }));
+    } catch (error) {
+      console.error(error);
+    }
+  }, [authState.authenticated]);
 
   useEffect(() => {
     let active = true;
@@ -179,14 +202,15 @@ export default function App() {
     const socket = getSocket();
 
     function handleStateSnapshot(snapshot) {
-      setSystemState((current) => ({ ...current, ...snapshot }));
+      setSystemState((current) => ({ ...current, ...markSnapshotReceived(snapshot) }));
     }
 
     function handleTimerState(timer) {
-      setSystemState((current) => ({ ...current, timer }));
+      setSystemState((current) => ({ ...current, timer: markTimerReceived(timer) }));
     }
 
     refreshSystemState();
+    refreshTimerState();
     socket.connect();
     socket.on("state_snapshot", handleStateSnapshot);
     socket.on("timer_state", handleTimerState);
@@ -201,6 +225,7 @@ export default function App() {
     authState.role,
     authState.station_id,
     refreshSystemState,
+    refreshTimerState,
   ]);
 
   useEffect(() => {
@@ -219,6 +244,19 @@ export default function App() {
     refreshSystemState,
     statePollIntervalMs,
   ]);
+
+  useEffect(() => {
+    if (authState.loading || !authState.authenticated) {
+      return undefined;
+    }
+
+    refreshTimerState();
+    const intervalId = window.setInterval(() => {
+      refreshTimerState();
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [authState.authenticated, authState.loading, refreshTimerState]);
 
   useEffect(() => {
     function handlePopState() {
@@ -262,7 +300,7 @@ export default function App() {
   }
 
   function handleTimerSnapshot(timer) {
-    setSystemState((current) => ({ ...current, timer }));
+    setSystemState((current) => ({ ...current, timer: markTimerReceived(timer) }));
   }
 
   const isWorkstationSurface =

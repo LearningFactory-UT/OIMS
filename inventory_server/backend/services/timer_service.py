@@ -157,7 +157,9 @@ class TimerService:
     def _on_timer_end(self):
         from services.inventory_service import InventoryService
 
-        InventoryService.get_instance().clear_all_orders(reason="timer")
+        inventory_service = InventoryService.get_instance()
+        inventory_service.clear_all_orders(reason="timer")
+        inventory_service.reset_transient_operator_states(emit=False)
         self._emit_timer_events("ended")
 
     # ------------------------------------------------------------------
@@ -189,6 +191,9 @@ class TimerService:
             self._persist_state()
             self._ensure_thread()
 
+        from services.inventory_service import InventoryService
+
+        InventoryService.get_instance().reset_transient_operator_states(emit=False)
         self._emit_timer_events("start")
         return True
 
@@ -233,7 +238,9 @@ class TimerService:
         if was_active:
             from services.inventory_service import InventoryService
 
-            InventoryService.get_instance().clear_all_orders(reason="timer")
+            inventory_service = InventoryService.get_instance()
+            inventory_service.clear_all_orders(reason="timer")
+            inventory_service.reset_transient_operator_states(emit=False)
         self._emit_timer_events("stop")
         return was_active
 

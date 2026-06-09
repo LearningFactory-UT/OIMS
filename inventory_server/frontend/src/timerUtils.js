@@ -21,7 +21,24 @@ export function getTimerSeconds(timer, now = new Date()) {
     return timer.paused_seconds || 0;
   }
 
-  if (timer.state !== "running" || !timer.start_time) {
+  if (timer.state !== "running") {
+    return timer.remaining_seconds || 0;
+  }
+
+  const receivedAtDate = parseServerDate(timer.client_received_at);
+  if (
+    receivedAtDate &&
+    !Number.isNaN(receivedAtDate.getTime()) &&
+    Number.isFinite(Number(timer.remaining_seconds))
+  ) {
+    const elapsedSinceReceipt = Math.max(
+      0,
+      Math.floor((now.getTime() - receivedAtDate.getTime()) / 1000)
+    );
+    return Math.max(0, Number(timer.remaining_seconds) - elapsedSinceReceipt);
+  }
+
+  if (!timer.start_time) {
     return timer.remaining_seconds || 0;
   }
 

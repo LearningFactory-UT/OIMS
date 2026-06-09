@@ -597,6 +597,30 @@ class InventoryService:
         side_state["manual_state"] = "reset"
         return True
 
+    def _reset_transient_state_for_side(self, station_id: str, side: str):
+        side_state = self.side_state_store[station_id][side]
+        side_state["manual_state"] = "reset"
+        side_state["help_id"] = None
+        side_state["help_idle"] = False
+        side_state["help_created_at"] = None
+        side_state["prev_ws_order_id"] = None
+        side_state["prev_ws_order_idle"] = False
+        side_state["prev_ws_order_created_at"] = None
+        side_state["ready_for_next_id"] = None
+        side_state["ready_for_next_created_at"] = None
+        side_state["updated_at"] = datetime.utcnow()
+
+    def reset_transient_operator_states(self, emit: bool = True):
+        for station_id in list(self.station_registry.keys()):
+            for side in ["L", "R"]:
+                self._reset_transient_state_for_side(station_id, side)
+                self._persist_side_state(station_id, side)
+            self._refresh_station_projection(station_id, persist=False, emit_lights=True)
+
+        self._record_event("operator_states_reset", payload={"source": "timer_lifecycle"})
+        if emit:
+            self.emit_state_snapshot()
+
     def _normalize_order_payload(self, order_data: dict, source: str) -> dict:
         if "attributes" in order_data:
             attributes = order_data["attributes"]
