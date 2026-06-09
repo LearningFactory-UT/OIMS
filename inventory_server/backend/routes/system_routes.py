@@ -34,6 +34,23 @@ def state():
     return jsonify(InventoryService.get_instance().get_state_snapshot(get_current_access_context()))
 
 
+@system_bp.route("/orders", methods=["GET"])
+@require_roles("admin", "inventory")
+def orders_state():
+    return jsonify(InventoryService.get_instance().get_orders_state_snapshot())
+
+
+@system_bp.route("/tablet-state", methods=["GET"])
+@require_roles("tablet")
+def tablet_state():
+    access_context = get_current_access_context()
+    if not access_context.station_id:
+        return jsonify({"error": "tablet device is not bound to a station"}), 400
+    return jsonify(
+        InventoryService.get_instance().get_tablet_state_snapshot(access_context.station_id)
+    )
+
+
 @system_bp.route("/events", methods=["GET"])
 @require_roles("admin")
 def recent_events():

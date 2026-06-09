@@ -72,35 +72,72 @@ function defaultRouteForAuth(authState) {
   return "/admin";
 }
 
+function stateEndpointForRoute(authState, route) {
+  if (!authState.authenticated) {
+    return null;
+  }
+  if (authState.role === "inventory") {
+    return "/api/system/orders";
+  }
+  if (authState.role === "tablet") {
+    return "/api/system/tablet-state";
+  }
+  if (route === "/orders-board") {
+    return "/api/system/orders";
+  }
+  return "/api/system/state";
+}
+
+function statePollIntervalForRoute(authState, route) {
+  if (!authState.authenticated) {
+    return null;
+  }
+  if (["inventory", "tablet"].includes(authState.role) || route === "/orders-board") {
+    return 2000;
+  }
+  if (authState.role === "admin") {
+    return 10000;
+  }
+  return 5000;
+}
+
 export default function App() {
   const [systemState, setSystemState] = useState(EMPTY_STATE);
   const [authState, setAuthState] = useState(EMPTY_AUTH);
   const [route, setRoute] = useState(getRouteState);
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  const resolvedRoute = useMemo(() => {
+    if (route === "/") {
+      return defaultRouteForAuth(authState);
+    }
+    if (route === "/orders-board" && authState.role === "inventory") {
+      return "/inventory";
+    }
+    return route;
+  }, [authState, route]);
+
+  const stateEndpoint = useMemo(
+    () => stateEndpointForRoute(authState, resolvedRoute),
+    [authState, resolvedRoute]
+  );
+
+  const statePollIntervalMs = useMemo(
+    () => statePollIntervalForRoute(authState, resolvedRoute),
+    [authState, resolvedRoute]
+  );
+
   const refreshSystemState = useCallback(async () => {
-    if (!authState.authenticated) {
+    if (!stateEndpoint) {
       return;
     }
     try {
-      const snapshot = await apiFetch("/api/system/state");
+      const snapshot = await apiFetch(stateEndpoint);
       setSystemState((current) => ({ ...current, ...snapshot }));
     } catch (error) {
       console.error(error);
     }
-  }, [authState.authenticated]);
-
-  const refreshTimerState = useCallback(async () => {
-    if (!authState.authenticated) {
-      return;
-    }
-    try {
-      const timer = await apiFetch("/api/timer/");
-      setSystemState((current) => ({ ...current, timer }));
-    } catch (error) {
-      console.error(error);
-    }
-  }, [authState.authenticated]);
+  }, [stateEndpoint]);
 
   useEffect(() => {
     let active = true;
@@ -136,7 +173,6 @@ export default function App() {
     if (authState.role !== "admin") {
       disconnectSocket();
       refreshSystemState();
-      refreshTimerState();
       return undefined;
     }
 
@@ -151,7 +187,6 @@ export default function App() {
     }
 
     refreshSystemState();
-    refreshTimerState();
     socket.connect();
     socket.on("state_snapshot", handleStateSnapshot);
     socket.on("timer_state", handleTimerState);
@@ -166,33 +201,24 @@ export default function App() {
     authState.role,
     authState.station_id,
     refreshSystemState,
-    refreshTimerState,
   ]);
 
   useEffect(() => {
-    if (authState.loading || !authState.authenticated) {
+    if (authState.loading || !authState.authenticated || !statePollIntervalMs) {
       return undefined;
     }
 
     const intervalId = window.setInterval(() => {
       refreshSystemState();
-    }, 2000);
+    }, statePollIntervalMs);
 
     return () => window.clearInterval(intervalId);
-  }, [authState.authenticated, authState.loading, refreshSystemState]);
-
-  useEffect(() => {
-    if (authState.loading || !authState.authenticated) {
-      return undefined;
-    }
-
-    refreshTimerState();
-    const intervalId = window.setInterval(() => {
-      refreshTimerState();
-    }, 1000);
-
-    return () => window.clearInterval(intervalId);
-  }, [authState.authenticated, authState.loading, refreshTimerState]);
+  }, [
+    authState.authenticated,
+    authState.loading,
+    refreshSystemState,
+    statePollIntervalMs,
+  ]);
 
   useEffect(() => {
     function handlePopState() {
@@ -239,16 +265,6 @@ export default function App() {
     setSystemState((current) => ({ ...current, timer }));
   }
 
-  const resolvedRoute = useMemo(() => {
-    if (route === "/") {
-      return defaultRouteForAuth(authState);
-    }
-    if (route === "/orders-board" && authState.role === "inventory") {
-      return "/inventory";
-    }
-    return route;
-  }, [authState, route]);
-
   const isWorkstationSurface =
     resolvedRoute === "/tablet" || resolvedRoute.startsWith("/workstation/");
 
@@ -282,7 +298,7 @@ export default function App() {
           />
         );
       }
-      return <OrdersBoardPage onRefreshState={refreshSystemState} systemState={systemState} />;
+      return <OrdersBoardPage systemState={systemState} />;
     }
 
     if (resolvedRoute === "/tablet") {
@@ -370,7 +386,7 @@ export default function App() {
           />
         );
       }
-      return <OrdersBoardPage onRefreshState={refreshSystemState} systemState={systemState} />;
+      return <OrdersBoardPage systemState={systemState} />;
     }
 
     if (!authState.authenticated) {

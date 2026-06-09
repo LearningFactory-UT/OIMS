@@ -389,15 +389,21 @@ class InventoryService:
 
         return self.get_station_state(station_id)
 
-    def heartbeat_station(self, station_id: str, client_type: Optional[str] = None) -> dict:
+    def heartbeat_station(
+        self,
+        station_id: str,
+        client_type: Optional[str] = None,
+        emit: bool = False,
+    ) -> dict:
         station_id = self.resolve_station_id(original_ws_id=station_id)
         station = self.station_registry[station_id]
         station.last_seen = datetime.utcnow()
         if client_type:
             station.client_type = client_type
         self._persist_station_record(station_id)
-        self._refresh_station_projection(station_id, persist=True, emit_lights=False)
-        self.emit_state_snapshot()
+        self._refresh_station_projection(station_id, persist=False, emit_lights=False)
+        if emit:
+            self.emit_state_snapshot()
         return self.get_station_state(station_id)
 
     def delete_station(self, station_id: str, emit: bool = True) -> dict:
@@ -1201,6 +1207,43 @@ class InventoryService:
 
     def get_state_snapshot(self, access_context=None) -> dict:
         return self._filter_state_snapshot(self._build_full_state_snapshot(), access_context)
+
+    def get_orders_state_snapshot(self) -> dict:
+        from services.timer_service import TimerService
+
+        orders = self.get_active_orders()
+        return {
+            "assembly_type": self.assembly_type,
+            "timer": TimerService.get_instance().snapshot().to_dict(),
+            "stations": [],
+            "orders": orders,
+            "summary": {
+                "active_orders": len(orders),
+                "urgent_orders": len([order for order in orders if order["urgent"]]),
+                "stations": 0,
+            },
+            "recent_events": [],
+            "devices": [],
+        }
+
+    def get_tablet_state_snapshot(self, station_id: str) -> dict:
+        from services.timer_service import TimerService
+
+        station = self.get_station_state(station_id)
+        orders = station.get("active_orders", [])
+        return {
+            "assembly_type": self.assembly_type,
+            "timer": TimerService.get_instance().snapshot().to_dict(),
+            "stations": [station],
+            "orders": orders,
+            "summary": {
+                "active_orders": len(orders),
+                "urgent_orders": len([order for order in orders if order["urgent"]]),
+                "stations": 1,
+            },
+            "recent_events": [],
+            "devices": [],
+        }
 
     def emit_state_snapshot(self, sid: Optional[str] = None):
         from auth.access import get_current_access_context, get_socket_context, iter_socket_contexts

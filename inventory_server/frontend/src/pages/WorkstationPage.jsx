@@ -34,7 +34,6 @@ export default function WorkstationPage({ currentTime, onRefreshState, stationId
   const [busyAction, setBusyAction] = useState("");
   const [decisionDialog, setDecisionDialog] = useState(null);
   const [stationFallback, setStationFallback] = useState(null);
-  const [localTimer, setLocalTimer] = useState(systemState.timer);
 
   const stationFromSnapshot = useMemo(
     () =>
@@ -45,7 +44,7 @@ export default function WorkstationPage({ currentTime, onRefreshState, stationId
     [stationId, systemState.stations]
   );
   const station = stationFromSnapshot || stationFallback;
-  const timerState = localTimer || systemState.timer;
+  const timerState = systemState.timer;
   const isTimerRunning = timerState?.state === "running";
   const interactionEnabled = Boolean(station?.enabled && isTimerRunning);
   const inactivityTitle = !station?.enabled
@@ -114,35 +113,6 @@ export default function WorkstationPage({ currentTime, onRefreshState, stationId
   }, [stationFromSnapshot]);
 
   useEffect(() => {
-    setLocalTimer(systemState.timer);
-  }, [systemState.timer]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function refreshLocalTimer() {
-      try {
-        const timer = await apiFetch("/api/timer/");
-        if (!cancelled) {
-          setLocalTimer(timer);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.error(error);
-        }
-      }
-    }
-
-    refreshLocalTimer();
-    const intervalId = window.setInterval(refreshLocalTimer, 1000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-    };
-  }, []);
-
-  useEffect(() => {
     setDraft(buildDraft(catalog));
   }, [systemState.assembly_type]);
 
@@ -188,8 +158,6 @@ export default function WorkstationPage({ currentTime, onRefreshState, stationId
         }),
       });
       setDraft(buildDraft(catalog));
-      const projection = await apiFetch(`/api/stations/${stationId}`);
-      setStationFallback(projection);
       await onRefreshState?.();
     } finally {
       setBusyAction("");
@@ -302,8 +270,6 @@ export default function WorkstationPage({ currentTime, onRefreshState, stationId
         method: "PATCH",
         body: JSON.stringify({ urgent }),
       });
-      const projection = await apiFetch(`/api/stations/${stationId}`);
-      setStationFallback(projection);
       await onRefreshState?.();
     } finally {
       setBusyAction("");
@@ -319,8 +285,6 @@ export default function WorkstationPage({ currentTime, onRefreshState, stationId
       await apiFetch(`/api/orders/${orderId}/deliver`, {
         method: "POST",
       });
-      const projection = await apiFetch(`/api/stations/${stationId}`);
-      setStationFallback(projection);
       await onRefreshState?.();
     } finally {
       setBusyAction("");
@@ -336,8 +300,6 @@ export default function WorkstationPage({ currentTime, onRefreshState, stationId
       await apiFetch(`/api/orders/${orderId}`, {
         method: "DELETE",
       });
-      const projection = await apiFetch(`/api/stations/${stationId}`);
-      setStationFallback(projection);
       await onRefreshState?.();
     } finally {
       setBusyAction("");

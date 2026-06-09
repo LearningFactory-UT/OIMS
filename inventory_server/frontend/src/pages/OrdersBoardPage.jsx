@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useMemo } from "react";
 
 function renderItemsTable(items) {
   const rows = Object.entries(items);
@@ -27,20 +27,7 @@ function renderItemsTable(items) {
   );
 }
 
-export default function OrdersBoardPage({ systemState, onRefreshState }) {
-  useEffect(() => {
-    onRefreshState?.();
-    if (!onRefreshState) {
-      return undefined;
-    }
-
-    const intervalId = window.setInterval(() => {
-      onRefreshState();
-    }, 2000);
-
-    return () => window.clearInterval(intervalId);
-  }, [onRefreshState]);
-
+export default function OrdersBoardPage({ systemState }) {
   const urgentOrders = useMemo(
     () => systemState.orders.filter((order) => order.urgent),
     [systemState.orders]
