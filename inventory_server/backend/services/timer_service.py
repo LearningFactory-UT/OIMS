@@ -3,10 +3,14 @@ from __future__ import annotations
 import threading
 import time
 from datetime import datetime, timedelta
+import logging
 
 from db_engine import SessionLocal
 from models.db_models import TimerModel
 from socketio_instance import socketio
+
+
+logger = logging.getLogger(__name__)
 
 
 class TimerService:
@@ -128,29 +132,43 @@ class TimerService:
     def _notify_snapshot_refresh(self):
         from services.inventory_service import InventoryService
 
-        inventory_service = InventoryService.get_instance()
-        inventory_service.sync_all_andon_states(emit=False)
-        inventory_service.emit_state_snapshot()
+        try:
+            inventory_service = InventoryService.get_instance()
+            inventory_service.sync_all_andon_states(emit=False)
+            inventory_service.emit_state_snapshot()
+        except Exception:
+            logger.exception("Failed to broadcast inventory snapshot after timer update.")
+
+    def _reset_operator_states_for_timer_lifecycle(self):
+        from services.inventory_service import InventoryService
+
+        try:
+            InventoryService.get_instance().reset_transient_operator_states(emit=False)
+        except Exception:
+            logger.exception("Failed to reset operator states during timer lifecycle.")
 
     def _emit_timer_events(self, action: str):
         snapshot = self.snapshot().to_dict()
-        socketio.emit("timer_state", snapshot)
+        try:
+            socketio.emit("timer_state", snapshot)
 
-        if action == "start":
-            socketio.emit("timer_start", {"duration": snapshot["remaining_seconds"]})
-            socketio.emit("timer_state_changed", {"state": "started"})
-        elif action == "pause":
-            socketio.emit("timer_pause", {"paused_time": snapshot["paused_seconds"]})
-            socketio.emit("timer_state_changed", {"state": "paused"})
-        elif action == "resume":
-            socketio.emit("timer_resume", {"remaining": snapshot["remaining_seconds"]})
-            socketio.emit("timer_state_changed", {"state": "resumed"})
-        elif action == "stop":
-            socketio.emit("timer_stop", {})
-            socketio.emit("timer_state_changed", {"state": "stopped"})
-        elif action == "ended":
-            socketio.emit("timer_ended", {"message": "Timer ended"})
-            socketio.emit("timer_state_changed", {"state": "ended"})
+            if action == "start":
+                socketio.emit("timer_start", {"duration": snapshot["remaining_seconds"]})
+                socketio.emit("timer_state_changed", {"state": "started"})
+            elif action == "pause":
+                socketio.emit("timer_pause", {"paused_time": snapshot["paused_seconds"]})
+                socketio.emit("timer_state_changed", {"state": "paused"})
+            elif action == "resume":
+                socketio.emit("timer_resume", {"remaining": snapshot["remaining_seconds"]})
+                socketio.emit("timer_state_changed", {"state": "resumed"})
+            elif action == "stop":
+                socketio.emit("timer_stop", {})
+                socketio.emit("timer_state_changed", {"state": "stopped"})
+            elif action == "ended":
+                socketio.emit("timer_ended", {"message": "Timer ended"})
+                socketio.emit("timer_state_changed", {"state": "ended"})
+        except Exception:
+            logger.exception("Failed to emit timer socket events for action %s.", action)
 
         self._notify_snapshot_refresh()
 
@@ -159,7 +177,7 @@ class TimerService:
 
         inventory_service = InventoryService.get_instance()
         inventory_service.clear_all_orders(reason="timer")
-        inventory_service.reset_transient_operator_states(emit=False)
+        self._reset_operator_states_for_timer_lifecycle()
         self._emit_timer_events("ended")
 
     # ------------------------------------------------------------------
@@ -191,9 +209,7 @@ class TimerService:
             self._persist_state()
             self._ensure_thread()
 
-        from services.inventory_service import InventoryService
-
-        InventoryService.get_instance().reset_transient_operator_states(emit=False)
+        self._reset_operator_states_for_timer_lifecycle()
         self._emit_timer_events("start")
         return True
 
@@ -240,7 +256,7 @@ class TimerService:
 
             inventory_service = InventoryService.get_instance()
             inventory_service.clear_all_orders(reason="timer")
-            inventory_service.reset_transient_operator_states(emit=False)
+            self._reset_operator_states_for_timer_lifecycle()
         self._emit_timer_events("stop")
         return was_active
 
